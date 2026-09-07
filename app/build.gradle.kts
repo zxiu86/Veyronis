@@ -13,14 +13,29 @@ android {
   namespace = "com.example"
   compileSdk { version = release(36) { minorApiLevel = 1 } }
 
+  // Read version from version.json if available, or environment variable, or fallback
+  val versionJsonFile = file("${rootDir}/version.json")
+  val (jsonVersionName, jsonVersionCode) = if (versionJsonFile.exists()) {
+    try {
+      val text = versionJsonFile.readText()
+      val nameMatch = Regex("\"versionName\"\\s*:\\s*\"([^\"]+)\"").find(text)?.groupValues?.get(1)
+      val codeMatch = Regex("\"versionCode\"\\s*:\\s*(\\d+)").find(text)?.groupValues?.get(1)?.toIntOrNull()
+      Pair(nameMatch, codeMatch)
+    } catch (e: Exception) {
+      Pair(null, null)
+    }
+  } else {
+    Pair(null, null)
+  }
+
   val envVersionName = providers.environmentVariable("VERSION_NAME")
     .map { it.trim().removePrefix("v") }
     .filter { it.isNotEmpty() }
-    .getOrElse("1.0.0")
+    .getOrElse(jsonVersionName ?: "1.0.0")
 
   val envVersionCode = providers.environmentVariable("VERSION_CODE")
     .map { it.toIntOrNull() ?: 1 }
-    .getOrElse(1)
+    .getOrElse(jsonVersionCode ?: 1)
 
   defaultConfig {
     applicationId = "com.aistudio.veyronis.wnvzxp"
@@ -36,26 +51,30 @@ android {
     create("release") {
       val customPath = System.getenv("KEYSTORE_PATH")
       val resolvedFile = when {
-        !customPath.isNullOrBlank() -> file(customPath)
+        !customPath.isNullOrBlank() && file(customPath).exists() -> file(customPath)
         file("${rootDir}/release.keystore").exists() -> file("${rootDir}/release.keystore")
         file("${projectDir}/release.keystore").exists() -> file("${projectDir}/release.keystore")
-        else -> null
+        file("${rootDir}/debug.keystore").exists() -> file("${rootDir}/debug.keystore")
+        else -> file("${rootDir}/release.keystore")
       }
-      if (resolvedFile != null && resolvedFile.exists()) {
-        storeFile = resolvedFile
-        storePassword = System.getenv("KEYSTORE_PASSWORD") ?: System.getenv("STORE_PASSWORD")
-        keyAlias = System.getenv("KEY_ALIAS") ?: "veyronis"
-        keyPassword = System.getenv("KEY_PASSWORD") ?: System.getenv("KEYSTORE_PASSWORD") ?: System.getenv("STORE_PASSWORD")
-      }
+      val isCustomRelease = file("${rootDir}/release.keystore").exists() || (!customPath.isNullOrBlank() && file(customPath).exists())
+      storeFile = resolvedFile
+      storePassword = System.getenv("KEYSTORE_PASSWORD") ?: System.getenv("STORE_PASSWORD") ?: "android"
+      keyAlias = System.getenv("KEY_ALIAS") ?: if (isCustomRelease) "veyronis" else "androiddebugkey"
+      keyPassword = System.getenv("KEY_PASSWORD") ?: System.getenv("KEYSTORE_PASSWORD") ?: System.getenv("STORE_PASSWORD") ?: "android"
     }
     create("debugConfig") {
-      val debugStore = file("${rootDir}/debug.keystore")
-      if (debugStore.exists()) {
-        storeFile = debugStore
-        storePassword = "android"
-        keyAlias = "androiddebugkey"
-        keyPassword = "android"
+      // Prioritize release.keystore if present, otherwise debug.keystore (storeFile is always set)
+      val hasRelease = file("${rootDir}/release.keystore").exists()
+      val debugStore = if (hasRelease) {
+        file("${rootDir}/release.keystore")
+      } else {
+        file("${rootDir}/debug.keystore")
       }
+      storeFile = debugStore
+      storePassword = if (hasRelease) (System.getenv("KEYSTORE_PASSWORD") ?: "android") else "android"
+      keyAlias = if (hasRelease) (System.getenv("KEY_ALIAS") ?: "veyronis") else "androiddebugkey"
+      keyPassword = if (hasRelease) (System.getenv("KEY_PASSWORD") ?: "android") else "android"
     }
   }
 
@@ -64,14 +83,11 @@ android {
       isCrunchPngs = false
       isMinifyEnabled = false
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-      val releaseConfig = signingConfigs.getByName("release")
-      if (releaseConfig.storeFile?.exists() == true) {
-        signingConfig = releaseConfig
-      } else {
-        signingConfig = signingConfigs.getByName("debugConfig")
-      }
+      signingConfig = signingConfigs.getByName("release")
     }
-    debug { signingConfig = signingConfigs.getByName("debugConfig") }
+    debug {
+      signingConfig = signingConfigs.getByName("debugConfig")
+    }
   }
   compileOptions {
     sourceCompatibility = JavaVersion.VERSION_11

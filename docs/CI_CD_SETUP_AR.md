@@ -1,64 +1,67 @@
-# دليل إعداد GitHub Actions وCI/CD لتطبيق Veyronis
+# دليل إعداد GitHub Actions وCI/CD الموحد لتطبيق Veyronis
 
-تم تجهيز وإعداد مسارات عمل أتمتة GitHub Actions (Workflows) لتطبيق Veyronis بأعلى معايير الأمان والاستقرار وفقًا لإصدارات Gradle 9.3.1 وAndroid Gradle Plugin 9.1.1 وJava 21.
+تم دمج وتوحيد مسار البناء والاختبار والإصدار التلقائي داخل ملف مسار عمل واحد متكامل:
+`.github/workflows/ci.yml`
 
 ---
 
-## 1. مسارات العمل المنفذة (Workflows)
+## 1. مسار العمل الموحد (`.github/workflows/ci.yml`)
 
-### أ. مسار التكامل المستمر: `.github/workflows/ci.yml` (CI Workflow)
+يحتوي المسار على مرحلتين متتاليتين مترابطتين:
+
+### المرحلة الأولى: الفحص والاختبارات (`validate-and-test`)
 - **المحفزات**:
-  - يتم تشغيله تلقائيًا عند أي `push` إلى الفروع: `main`, `master`, `develop`.
-  - يتم تشغيله عند فتح أي `pull_request` موجه إلى `main` أو `master`.
+  - يتم تشغيله تلقائيًا عند أي `push` إلى الفروع (`main`, `master`, `develop`) أو عند دفع `Tag` يبدأ بـ `v*`.
+  - يعمل عند فتح أي `pull_request` موجه إلى `main` أو `master`.
   - إمكانية التشغيل اليدوي (`workflow_dispatch`).
-- **المميزات**:
-  - تفعيل تسريع التخزين المؤقت **GitHub Actions Cache** عبر `gradle/actions/setup-gradle@v4` و`actions/cache@v4` لتخزين Gradle wrapper ومكتبات التبعيات وConfiguration Cache.
+- **المهام المنفذة**:
+  - تفعيل تسريع التخزين المؤقت **GitHub Actions Cache** عبر `gradle/actions/setup-gradle@v4` و`actions/cache@v4` لتخزين التبعيات وConfiguration Cache.
   - فحص الكود وتشغيل الـLint واختبارات الوحدة (`testDebugUnitTest`).
-  - بناء APK تجريبي للتحقق من سلامة البناء (`assembleDebug`).
-  - رفع تقارير الاختبارات وملف الـAPK كـArtifacts.
+  - بناء APK تجريبي والتأكد من سلامة التجميع وخلوه من أخطاء KSP أو التوقيع (`assembleDebug`).
+  - رفع تقارير الفحص والـAPK كـArtifacts.
 
-### ب. مسار الإصدار والأتمتة: `.github/workflows/release.yml` (Release Workflow)
-- **المحفزات**:
-  - عند دفع Tag يبدأ بالحرف `v` ومتبوع برقم الإصدار (مثل `v1.0.0` أو `v1.2.3`).
-  - إمكانية التشغيل اليدوي من تبويب Actions في GitHub مع إدخال رقم الـTag.
-- **الحماية والأمان**:
-  - **حماية مطلقة**: تشغيل جميع الاختبارات الآلية أولاً، وإذا فشل أي اختبار أو فشل فحص مفتاح التوقيع يتم إيقاف العملية فورًا ومنع نشر الإصدار.
-  - **حذف آمن وفوري**: يتم حذف ملف `release.keystore` من قرص البيئة الافتراضية بمجرد انتهاء البناء (`Secure Keystore Cleanup`).
-  - **إدارة الإصدارات الذكية**:
-    - استخراج `versionName` تلقائيًا من الـTag (مثال: `v1.2.3` ➔ `1.2.3`).
-    - حساب `versionCode` ديناميكيًا بصيغة تصاعدية صارمة تضمن عدم تكراره أو خفضه:
-      `VERSION_CODE = (MAJOR * 100000) + (MINOR * 1000) + (PATCH * 10) + COMMIT_COUNT`
-  - **بناء ملفات الإنتاج**:
-    - بناء ملف APK جاهز للتثبيت المباشر (`assembleRelease`).
-    - بناء حزمة Android App Bundle (AAB) لمتجر Google Play (`bundleRelease`).
-    - إنشاء بصمات التحقق الرقمية `SHA256SUMS.txt`.
-  - **إنشاء GitHub Release تلقائيًا**:
-    - رفع ملفات `Veyronis-vX.Y.Z.apk` و`Veyronis-vX.Y.Z.aab` وملف البصمات.
-    - توليد ملاحظات الإصدار (Release Notes / Changelog) تلقائيًا.
+### المرحلة الثانية: الإصدار والإنتاج التلقائي (`build-and-release`)
+- **المحفزات التلقائية**:
+  - تعمل هذه المرحلة **تلقائيًا** بعد نجاح المرحلة الأولى عند الرفع (`push`) إلى فرع الإنتاج `main` أو `master`، أو عند دفع `Tag` بإصدار جديد.
+- **إدارة الإصدارات الذكية من `version.json`**:
+  - يتم قراءة رقم الإصدار مباشرة وتلقائيًا من ملف `version.json`:
+    ```json
+    {
+      "versionName": "1.0.0",
+      "versionCode": 1,
+      "releaseNotes": "وصف التحديث..."
+    }
+    ```
+  - إذا تم تحديث رقم الإصدار في `version.json` أو تم دفع `Tag`، يقوم الـWorkflow بإنشاء الإصدار ومطابقة رقم `versionCode` بحيث يكون تصاعديًا بشكل صارم ويستحيل تكراره أو خفضه.
+- **بناء حزم الإنتاج الموقعة**:
+  - بناء APK إنتاج كامل (`assembleRelease`).
+  - بناء حزمة Google Play Bundle (`bundleRelease`).
+  - إنشاء ملف بصمات التحقق الرقمي `SHA256SUMS.txt`.
+- **نشر GitHub Release رسمي**:
+  - إنشاء Release تلقائي برقم الإصدار ورفع ملفات `Veyronis-vX.Y.Z.apk` و`Veyronis-vX.Y.Z.aab` وملف البصمات.
+  - توليد Release Notes تلقائيًا من سجل التغييرات في Git.
 
 ---
 
-## 2. المفاتيح والبيانات السرية المطلوبة في GitHub (GitHub Secrets)
+## 2. إعداد مفتاح التوقيع الثابت `release.keystore`
 
-يجب إعداد الأسرار التالية في مستودع GitHub عبر:
+> تم تعديل إعدادات التوقيع في المشروع لتقبل **`release.keystore`** بشكل أساسي في كل من البناء التجريبي وبناء الإنتاج، مع توفير بديل آمن يمنع توقف البناء في حال عدم توفر المفتاح أثناء مرحلة الـCI الأولى.
+
+### الأسرار المطلوبة في GitHub Secrets:
+في إعدادات المستودع على GitHub:
 **Settings** ➔ **Secrets and variables** ➔ **Actions** ➔ **New repository secret**:
 
 | اسم السر (Secret Name) | الوصف | مثال |
 | :--- | :--- | :--- |
-| `KEYSTORE_BASE64` | محتوى ملف `release.keystore` مشفرًا بصيغة Base64 | `MIIKPQIBAzCCCgcGCSqGSIb3DQEHAaCCCfgE...` |
-| `KEYSTORE_PASSWORD` | كلمة مرور مخزن المفاتيح (Keystore Password) | `YourSecureKeystorePassword123!` |
+| `KEYSTORE_BASE64` | محتوى ملف `release.keystore` مشفرًا بنص Base64 | `MIIKPQIBAzCCCgcGCSqGSIb3DQEHAaCCCfgE...` |
+| `KEYSTORE_PASSWORD` | كلمة مرور مخزن المفاتيح (Keystore Password) | `YourKeystorePassword123!` |
 | `KEY_ALIAS` | الاسم التعريفي للمفتاح داخل المخزن (Key Alias) | `veyronis` |
-| `KEY_PASSWORD` | كلمة مرور المفتاح الخاص (Key Password) | `YourSecureKeyPassword123!` |
-
-*(ملاحظة: الرمز الافتراضي `GITHUB_TOKEN` متوفر تلقائيًا ومدمج داخل بيئة GitHub Actions)*
+| `KEY_PASSWORD` | كلمة مرور المفتاح الخاص (Key Password) | `YourKeyPassword123!` |
 
 ---
 
-## 3. كيفية إنشاء مفتاح التوقيع الدائم الثابت (One-Time Generation)
+## 3. كيفية توليد ملف `release.keystore` الثابت (مرة واحدة فقط)
 
-> **قاعدة ذهبية هامة**: يُنشأ هذا المفتاح **مرة واحدة فقط** ويُحتفظ به في مكان آمن ومشفر مدى الحياة. تغيير هذا المفتاح مستقبلاً يمنع المستخدمين من تحديث التطبيق على أجهزتهم.
-
-### الخطوة 1: توليد ملف `release.keystore` محليًا
 قم بتشغيل الأمر التالي في سطر الأوامر (Terminal) على جهازك:
 
 ```bash
@@ -71,31 +74,36 @@ keytool -genkeypair -v \
   -storetype JKS
 ```
 
-### الخطوة 2: تحويل المفتاح إلى Base64 لإضافته في GitHub Secrets
-
-- **على أنظمة Linux / macOS**:
+ثم تحويله إلى نص Base64:
+- **على Linux / macOS**:
   ```bash
   base64 -w 0 release.keystore > release_keystore_base64.txt
-  # أو على macOS:
-  # base64 -i release.keystore -o release_keystore_base64.txt
   ```
-
-- **على أنظمة Windows (PowerShell)**:
+- **على Windows (PowerShell)**:
   ```powershell
   [Convert]::ToBase64String([IO.File]::ReadAllBytes("release.keystore")) | Out-File -Encoding ASCII release_keystore_base64.txt
   ```
 
-انسخ النص الناتج وضعه داخل السر `KEYSTORE_BASE64` في GitHub Secrets.
+انسخ محتوى الملف وضعه في السر `KEYSTORE_BASE64` على GitHub.
 
 ---
 
-## 4. كيفية إطلاق إصدار جديد (Triggering a Release)
+## 4. كيفية إطلاق إصدار جديد تلقائيًا
 
-كل ما عليك فعله لإطلاق إصدار جديد هو إنشاء Tag ودفعه إلى GitHub:
+كل ما عليك فعله لإطلاق إصدار جديد هو أحد أمرين:
 
-```bash
-git tag v1.0.0
-git push origin v1.0.0
-```
+1. **تحديث ملف `version.json` في المستودع ودفعه إلى `main`**:
+   ```json
+   {
+     "versionName": "1.0.1",
+     "versionCode": 2,
+     "releaseNotes": "تحسينات جديدة ودعم مزامنة البيانات"
+   }
+   ```
+   بمجرد عمل `git commit` و `git push origin main`، سيعمل الـ CI/CD تلقائيًا، ينفذ الفحص، ويبني الإصدار ويرفعه إلى GitHub Releases.
 
-سيقوم GitHub Actions فورًا بالتقاط الحدث، تشغيل الاختبارات، بناء وتوقيع الـAPK والـAAB، وإنشاء GitHub Release ورفع الملفات إليه تلقائيًا.
+2. **أو دفع Tag من خلال Git**:
+   ```bash
+   git tag v1.0.1
+   git push origin v1.0.1
+   ```

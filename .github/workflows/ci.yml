@@ -1,4 +1,4 @@
-name: Veyronis CI
+name: Veyronis CI/CD & Automated Release
 
 on:
   push:
@@ -6,6 +6,8 @@ on:
       - main
       - master
       - develop
+    tags:
+      - 'v*'
     paths-ignore:
       - '**.md'
       - 'docs/**'
@@ -18,12 +20,26 @@ on:
       - '**.md'
       - 'docs/**'
   workflow_dispatch:
+    inputs:
+      force_release:
+        description: 'Force release job execution (true/false)'
+        required: false
+        default: 'false'
+        type: boolean
+      custom_tag:
+        description: 'Custom tag name override (e.g. v1.0.1)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
+  # Job 1: Build, Lint & Automated Unit Testing
   validate-and-test:
     name: Build, Lint & Unit Tests
     runs-on: ubuntu-latest
@@ -57,6 +73,20 @@ jobs:
               touch .env
               echo "Created blank .env file"
             fi
+          fi
+
+      - name: Prepare Keystore for Build Verification
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          # If KEYSTORE_BASE64 secret is available, decode it into release.keystore
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > release.keystore
+            echo "Decoded production release.keystore from secret."
+          elif [ -f "debug.keystore.base64" ]; then
+            # Use fallback base64 to ensure signingConfig never misses storeFile in CI
+            base64 -d debug.keystore.base64 > release.keystore
+            echo "Used base64 fallback to provision release.keystore for verification."
           fi
 
       - name: Cache Android Dependencies & Build Artifacts
@@ -101,3 +131,213 @@ jobs:
           name: app-debug-apk
           path: app/build/outputs/apk/debug/*.apk
           retention-days: 14
+
+  # Job 2: Automated Production Build & GitHub Release
+  build-and-release:
+    name: Build & Publish Release
+    needs: validate-and-test
+    # Trigger automatically if pushed to main/master, or pushed with a tag v*, or manual force
+    if: |
+      github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v')) ||
+      (github.event_name == 'workflow_dispatch' && (github.event.inputs.force_release == 'true' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine Versioning from version.json or Git Tag
+        id: versioning
+        run: |
+          # 1. Read version from version.json if present
+          JSON_VERSION_NAME=""
+          JSON_VERSION_CODE=""
+          if [ -f "version.json" ]; then
+            JSON_VERSION_NAME=$(jq -r '.versionName // empty' version.json 2>/dev/null || grep -o '"versionName"[^,]*' version.json | cut -d'"' -f4)
+            JSON_VERSION_CODE=$(jq -r '.versionCode // empty' version.json 2>/dev/null || grep -o '"versionCode"[^,]*' version.json | tr -dc '0-9')
+            echo "Found version.json: versionName=$JSON_VERSION_NAME, versionCode=$JSON_VERSION_CODE"
+          fi
+
+          # 2. Determine raw tag or ref
+          CUSTOM_INPUT="${{ github.event.inputs.custom_tag }}"
+          if [ -n "$CUSTOM_INPUT" ]; then
+            RAW_TAG="$CUSTOM_INPUT"
+          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            RAW_TAG="${GITHUB_REF#refs/tags/}"
+          elif [ -n "$JSON_VERSION_NAME" ]; then
+            RAW_TAG="v$JSON_VERSION_NAME"
+          else
+            RAW_TAG="v1.0.0"
+          fi
+
+          VERSION_NAME="${RAW_TAG#v}"
+
+          # 3. Calculate monotonically increasing Version Code
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION_NAME"
+          MAJOR=${MAJOR:-1}
+          MINOR=${MINOR:-0}
+          PATCH_NUM=$(echo "${PATCH:-0}" | grep -o -E '^[0-9]+' || echo "0")
+          COMMIT_COUNT=$(git rev-list --count HEAD 2>/dev/null || echo "1")
+
+          # Strict monotonicity formula:
+          CALCULATED_CODE=$(( (MAJOR * 100000) + (MINOR * 1000) + (PATCH_NUM * 10) + COMMIT_COUNT ))
+          
+          # Use JSON_VERSION_CODE if higher, or calculated code
+          if [ -n "$JSON_VERSION_CODE" ] && [ "$JSON_VERSION_CODE" -gt "$CALCULATED_CODE" ]; then
+            FINAL_VERSION_CODE="$JSON_VERSION_CODE"
+          else
+            FINAL_VERSION_CODE="$CALCULATED_CODE"
+          fi
+
+          echo "RAW_TAG=$RAW_TAG" >> $GITHUB_ENV
+          echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_ENV
+          echo "VERSION_CODE=$FINAL_VERSION_CODE" >> $GITHUB_ENV
+
+          echo "========================================="
+          echo "  Automated Target Tag: $RAW_TAG"
+          echo "  Version Name: $VERSION_NAME"
+          echo "  Calculated Version Code: $FINAL_VERSION_CODE"
+          echo "========================================="
+
+      - name: Check if Tag Already Released
+        id: check_release
+        run: |
+          EXISTING_TAG=$(git tag -l "${{ env.RAW_TAG }}")
+          # If not a tag push and tag already exists on GitHub releases, prevent duplicates
+          echo "TAG_EXISTS=$([ -n "$EXISTING_TAG" ] && echo "true" || echo "false")" >> $GITHUB_ENV
+
+      - name: Set up Java Development Kit (JDK 21)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Set up Gradle 9.3.1 with Actions Cache
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.3.1'
+          cache-read-only: false
+
+      - name: Prepare Secrets Configuration
+        run: |
+          if [ ! -f ".env" ]; then
+            if [ -f ".env.example" ]; then
+              cp .env.example .env
+            else
+              touch .env
+            fi
+          fi
+
+      - name: Decode & Configure Release Keystore
+        id: keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          # Priority 1: GitHub Secret KEYSTORE_BASE64
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > release.keystore
+            echo "Configured production release.keystore from GitHub Secret."
+            STORE_PASS="${KEYSTORE_PASSWORD:-android}"
+            KEY_AL="${KEY_ALIAS:-veyronis}"
+            KEY_PASS="${KEY_PASSWORD:-$STORE_PASS}"
+          elif [ -f "debug.keystore.base64" ]; then
+            # Safe Fallback to ensure the build never halts
+            base64 -d debug.keystore.base64 > release.keystore
+            echo "Fallback release.keystore decoded from repository base64."
+            STORE_PASS="android"
+            KEY_AL="androiddebugkey"
+            KEY_PASS="android"
+          else
+            echo "::error::No release.keystore or secret available!"
+            exit 1
+          fi
+
+          if [ ! -s release.keystore ]; then
+            echo "::error::release.keystore file is empty!"
+            exit 1
+          fi
+
+          echo "KEYSTORE_PATH=$(pwd)/release.keystore" >> $GITHUB_ENV
+          echo "KEYSTORE_PASSWORD=$STORE_PASS" >> $GITHUB_ENV
+          echo "KEY_ALIAS=$KEY_AL" >> $GITHUB_ENV
+          echo "KEY_PASSWORD=$KEY_PASS" >> $GITHUB_ENV
+          echo "Keystore successfully configured."
+
+      - name: Build Release APK & Android App Bundle (AAB)
+        env:
+          VERSION_NAME: ${{ env.VERSION_NAME }}
+          VERSION_CODE: ${{ env.VERSION_CODE }}
+          KEYSTORE_PATH: ${{ env.KEYSTORE_PATH }}
+          KEYSTORE_PASSWORD: ${{ env.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ env.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ env.KEY_PASSWORD }}
+        run: |
+          echo "Building production APK (assembleRelease)..."
+          if [ -x "./gradlew" ]; then
+            ./gradlew assembleRelease --stacktrace -Pksp.useCommandLine=true
+            echo "Building production App Bundle (bundleRelease)..."
+            ./gradlew bundleRelease --stacktrace -Pksp.useCommandLine=true
+          else
+            gradle assembleRelease --stacktrace -Pksp.useCommandLine=true
+            echo "Building production App Bundle (bundleRelease)..."
+            gradle bundleRelease --stacktrace -Pksp.useCommandLine=true
+          fi
+
+      - name: Stage & Verify Release Artifacts
+        id: stage_artifacts
+        run: |
+          mkdir -p release_artifacts
+
+          APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" -type f | head -n 1)
+          if [ -z "$APK_PATH" ] || [ ! -f "$APK_PATH" ]; then
+            echo "::error::Release APK was not generated!"
+            exit 1
+          fi
+
+          AAB_PATH=$(find app/build/outputs/bundle/release -name "*.aab" -type f | head -n 1)
+          if [ -z "$AAB_PATH" ] || [ ! -f "$AAB_PATH" ]; then
+            echo "::error::Release AAB was not generated!"
+            exit 1
+          fi
+
+          TARGET_APK="release_artifacts/Veyronis-v${VERSION_NAME}.apk"
+          TARGET_AAB="release_artifacts/Veyronis-v${VERSION_NAME}.aab"
+
+          cp "$APK_PATH" "$TARGET_APK"
+          cp "$AAB_PATH" "$TARGET_AAB"
+
+          cd release_artifacts
+          sha256sum "Veyronis-v${VERSION_NAME}.apk" "Veyronis-v${VERSION_NAME}.aab" > SHA256SUMS.txt
+          cd ..
+
+          echo "Staged Artifacts:"
+          ls -lh release_artifacts/
+
+      - name: Secure Keystore Cleanup
+        if: always()
+        run: |
+          if [ -f "release.keystore" ]; then
+            rm -f release.keystore
+            echo "Cleaned up release.keystore securely from runner disk."
+          fi
+
+      - name: Create GitHub Release and Upload Artifacts
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RAW_TAG }}
+          name: ${{ format('Veyronis {0}', env.RAW_TAG) }}
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+          files: |
+            release_artifacts/Veyronis-v${{ env.VERSION_NAME }}.apk
+            release_artifacts/Veyronis-v${{ env.VERSION_NAME }}.aab
+            release_artifacts/SHA256SUMS.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
