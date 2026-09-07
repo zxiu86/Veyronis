@@ -1,0 +1,6 @@
+{
+  "name": "Veyronis",
+  "description": "Novel Writing & Worldbuilding Application featuring multi-timelines, causal graphs, dynamic codex, and consistency engine.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
