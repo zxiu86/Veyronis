@@ -74,17 +74,17 @@ jobs:
         run: |
           if [ -x "./gradlew" ]; then
             chmod +x ./gradlew
-            ./gradlew testDebugUnitTest lintDebug --stacktrace
+            ./gradlew testDebugUnitTest lintDebug --stacktrace -Pksp.useCommandLine=true
           else
-            gradle testDebugUnitTest lintDebug --stacktrace
+            gradle testDebugUnitTest lintDebug --stacktrace -Pksp.useCommandLine=true
           fi
 
       - name: Build Debug APK for Verification
         run: |
           if [ -x "./gradlew" ]; then
-            ./gradlew assembleDebug --stacktrace
+            ./gradlew assembleDebug --stacktrace -Pksp.useCommandLine=true
           else
-            gradle assembleDebug --stacktrace
+            gradle assembleDebug --stacktrace -Pksp.useCommandLine=true
           fi
 
       - name: Upload Test Reports

@@ -125,9 +125,9 @@ jobs:
           echo "Executing test suite to safeguard release..."
           if [ -x "./gradlew" ]; then
             chmod +x ./gradlew
-            ./gradlew testDebugUnitTest --stacktrace
+            ./gradlew testDebugUnitTest --stacktrace -Pksp.useCommandLine=true
           else
-            gradle testDebugUnitTest --stacktrace
+            gradle testDebugUnitTest --stacktrace -Pksp.useCommandLine=true
           fi
 
       - name: Build Release APK & Android App Bundle (AAB)
@@ -141,13 +141,13 @@ jobs:
         run: |
           echo "Building production APK (assembleRelease)..."
           if [ -x "./gradlew" ]; then
-            ./gradlew assembleRelease --stacktrace
+            ./gradlew assembleRelease --stacktrace -Pksp.useCommandLine=true
             echo "Building production App Bundle (bundleRelease)..."
-            ./gradlew bundleRelease --stacktrace
+            ./gradlew bundleRelease --stacktrace -Pksp.useCommandLine=true
           else
-            gradle assembleRelease --stacktrace
+            gradle assembleRelease --stacktrace -Pksp.useCommandLine=true
             echo "Building production App Bundle (bundleRelease)..."
-            gradle bundleRelease --stacktrace
+            gradle bundleRelease --stacktrace -Pksp.useCommandLine=true
           fi
 
       - name: Stage & Verify Release Artifacts
