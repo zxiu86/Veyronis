@@ -13,29 +13,49 @@ android {
   namespace = "com.example"
   compileSdk { version = release(36) { minorApiLevel = 1 } }
 
+  val envVersionName = providers.environmentVariable("VERSION_NAME")
+    .map { it.trim().removePrefix("v") }
+    .filter { it.isNotEmpty() }
+    .getOrElse("1.0.0")
+
+  val envVersionCode = providers.environmentVariable("VERSION_CODE")
+    .map { it.toIntOrNull() ?: 1 }
+    .getOrElse(1)
+
   defaultConfig {
     applicationId = "com.aistudio.veyronis.wnvzxp"
     minSdk = 24
     targetSdk = 36
-    versionCode = 1
-    versionName = "1.0.0"
+    versionCode = envVersionCode
+    versionName = envVersionName
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
 
   signingConfigs {
     create("release") {
-      val keystorePath = System.getenv("KEYSTORE_PATH") ?: "${rootDir}/my-upload-key.jks"
-      storeFile = file(keystorePath)
-      storePassword = System.getenv("STORE_PASSWORD")
-      keyAlias = "upload"
-      keyPassword = System.getenv("KEY_PASSWORD")
+      val customPath = System.getenv("KEYSTORE_PATH")
+      val resolvedFile = when {
+        !customPath.isNullOrBlank() -> file(customPath)
+        file("${rootDir}/release.keystore").exists() -> file("${rootDir}/release.keystore")
+        file("${projectDir}/release.keystore").exists() -> file("${projectDir}/release.keystore")
+        else -> null
+      }
+      if (resolvedFile != null && resolvedFile.exists()) {
+        storeFile = resolvedFile
+        storePassword = System.getenv("KEYSTORE_PASSWORD") ?: System.getenv("STORE_PASSWORD")
+        keyAlias = System.getenv("KEY_ALIAS") ?: "veyronis"
+        keyPassword = System.getenv("KEY_PASSWORD") ?: System.getenv("KEYSTORE_PASSWORD") ?: System.getenv("STORE_PASSWORD")
+      }
     }
     create("debugConfig") {
-      storeFile = file("${rootDir}/debug.keystore")
-      storePassword = "android"
-      keyAlias = "androiddebugkey"
-      keyPassword = "android"
+      val debugStore = file("${rootDir}/debug.keystore")
+      if (debugStore.exists()) {
+        storeFile = debugStore
+        storePassword = "android"
+        keyAlias = "androiddebugkey"
+        keyPassword = "android"
+      }
     }
   }
 
@@ -44,7 +64,12 @@ android {
       isCrunchPngs = false
       isMinifyEnabled = false
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-      signingConfig = signingConfigs.getByName("release")
+      val releaseConfig = signingConfigs.getByName("release")
+      if (releaseConfig.storeFile?.exists() == true) {
+        signingConfig = releaseConfig
+      } else {
+        signingConfig = signingConfigs.getByName("debugConfig")
+      }
     }
     debug { signingConfig = signingConfigs.getByName("debugConfig") }
   }

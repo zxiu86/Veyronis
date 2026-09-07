@@ -1,0 +1,32 @@
+{
+  "app": {
+    "name": "Veyronis",
+    "tagline": "Cosmic Novel Writing & Multiverse Worldbuilding Studio",
+    "version": "1.0.0",
+    "status": "Offline-First Engine Active"
+  },
+  "navigation": {
+    "manuscript": "Manuscript",
+    "codex": "Codex",
+    "characters": "Characters",
+    "timelines": "Timelines",
+    "physics": "Cosmic Laws",
+    "continuity": "Continuity",
+    "graph": "Causal Graph",
+    "export": "Publish & Export",
+    "settings": "Settings",
+    "search": "Global Search"
+  },
+  "manuscript": {
+    "series": "Series",
+    "book": "Book",
+    "chapter": "Chapter",
+    "scene": "Scene",
+    "outline": "Outline",
+    "words": "words",
+    "characters_count": "chars",
+    "reading_time": "Reading Time",
+    "target_words": "Target Words",
+    "progress": "Progress"
+  }
+}

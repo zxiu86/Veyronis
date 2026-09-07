@@ -1,0 +1,103 @@
+name: Veyronis CI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - develop
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.gitignore'
+  pull_request:
+    branches:
+      - main
+      - master
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-and-test:
+    name: Build, Lint & Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Java Development Kit (JDK 21)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Set up Gradle 9.3.1 with Actions Cache
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.3.1'
+          cache-read-only: false
+
+      - name: Prepare Environment Secrets
+        run: |
+          if [ ! -f ".env" ]; then
+            if [ -f ".env.example" ]; then
+              cp .env.example .env
+              echo "Created .env from .env.example"
+            else
+              touch .env
+              echo "Created blank .env file"
+            fi
+          fi
+
+      - name: Cache Android Dependencies & Build Artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.android/build-cache
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-android-${{ hashFiles('gradle/libs.versions.toml', 'app/build.gradle.kts', 'build.gradle.kts') }}
+          restore-keys: |
+            ${{ runner.os }}-android-
+
+      - name: Run Unit Tests & Lint
+        run: |
+          if [ -x "./gradlew" ]; then
+            chmod +x ./gradlew
+            ./gradlew testDebugUnitTest lintDebug --stacktrace
+          else
+            gradle testDebugUnitTest lintDebug --stacktrace
+          fi
+
+      - name: Build Debug APK for Verification
+        run: |
+          if [ -x "./gradlew" ]; then
+            ./gradlew assembleDebug --stacktrace
+          else
+            gradle assembleDebug --stacktrace
+          fi
+
+      - name: Upload Test Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-reports
+          path: app/build/reports/tests/
+          retention-days: 7
+
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          retention-days: 14

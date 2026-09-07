@@ -1,0 +1,207 @@
+name: Veyronis Release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+*'
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag version name (e.g. v1.0.0)'
+        required: true
+        default: 'v1.0.0'
+      release_title:
+        description: 'Custom release title (leave empty for automatic)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-and-release:
+    name: Build & Publish Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine Version Name and Dynamic Version Code
+        id: versioning
+        run: |
+          RAW_TAG="${{ github.event.inputs.tag_name || github.ref_name }}"
+          # Strip leading 'v' if present
+          VERSION_NAME="${RAW_TAG#v}"
+          
+          # Parse SemVer segments
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION_NAME"
+          MAJOR=${MAJOR:-1}
+          MINOR=${MINOR:-0}
+          PATCH_NUM=$(echo "${PATCH:-0}" | grep -o -E '^[0-9]+' || echo "0")
+          
+          # Calculate total commits in git history
+          COMMIT_COUNT=$(git rev-list --count HEAD 2>/dev/null || echo "1")
+          
+          # Strictly monotonically increasing formula:
+          # (MAJOR * 100000) + (MINOR * 1000) + (PATCH_NUM * 10) + COMMIT_COUNT
+          # Guarantees never repeating or decreasing version codes across builds and tags
+          VERSION_CODE=$(( (MAJOR * 100000) + (MINOR * 1000) + (PATCH_NUM * 10) + COMMIT_COUNT ))
+          
+          echo "RAW_TAG=$RAW_TAG" >> $GITHUB_ENV
+          echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_ENV
+          echo "VERSION_CODE=$VERSION_CODE" >> $GITHUB_ENV
+          
+          echo "========================================="
+          echo "  Release Tag: $RAW_TAG"
+          echo "  Version Name: $VERSION_NAME"
+          echo "  Calculated Version Code: $VERSION_CODE"
+          echo "========================================="
+
+      - name: Set up Java Development Kit (JDK 21)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Set up Gradle 9.3.1 with Actions Cache
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.3.1'
+          cache-read-only: false
+
+      - name: Prepare Secrets Configuration
+        run: |
+          if [ ! -f ".env" ]; then
+            if [ -f ".env.example" ]; then
+              cp .env.example .env
+            else
+              touch .env
+            fi
+          fi
+
+      - name: Decode & Configure Release Keystore
+        id: keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::GitHub Secret 'KEYSTORE_BASE64' is missing or empty! Releases must be signed with a production release.keystore."
+            exit 1
+          fi
+          
+          if [ -z "$KEYSTORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ]; then
+            echo "::error::GitHub Secrets 'KEYSTORE_PASSWORD' or 'KEY_ALIAS' are missing!"
+            exit 1
+          fi
+          
+          mkdir -p app
+          echo "$KEYSTORE_BASE64" | base64 -d > app/release.keystore
+          
+          if [ ! -s app/release.keystore ]; then
+            echo "::error::Decoded release.keystore is empty!"
+            exit 1
+          fi
+          
+          echo "KEYSTORE_PATH=app/release.keystore" >> $GITHUB_ENV
+          echo "KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD" >> $GITHUB_ENV
+          echo "KEY_ALIAS=$KEY_ALIAS" >> $GITHUB_ENV
+          echo "KEY_PASSWORD=${KEY_PASSWORD:-$KEYSTORE_PASSWORD}" >> $GITHUB_ENV
+          echo "Keystore successfully decoded and prepared for signing."
+
+      - name: Run Test Suite Before Release
+        run: |
+          echo "Executing test suite to safeguard release..."
+          if [ -x "./gradlew" ]; then
+            chmod +x ./gradlew
+            ./gradlew testDebugUnitTest --stacktrace
+          else
+            gradle testDebugUnitTest --stacktrace
+          fi
+
+      - name: Build Release APK & Android App Bundle (AAB)
+        env:
+          VERSION_NAME: ${{ env.VERSION_NAME }}
+          VERSION_CODE: ${{ env.VERSION_CODE }}
+          KEYSTORE_PATH: ${{ env.KEYSTORE_PATH }}
+          KEYSTORE_PASSWORD: ${{ env.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ env.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ env.KEY_PASSWORD }}
+        run: |
+          echo "Building production APK (assembleRelease)..."
+          if [ -x "./gradlew" ]; then
+            ./gradlew assembleRelease --stacktrace
+            echo "Building production App Bundle (bundleRelease)..."
+            ./gradlew bundleRelease --stacktrace
+          else
+            gradle assembleRelease --stacktrace
+            echo "Building production App Bundle (bundleRelease)..."
+            gradle bundleRelease --stacktrace
+          fi
+
+      - name: Stage & Verify Release Artifacts
+        id: stage_artifacts
+        run: |
+          mkdir -p release_artifacts
+          
+          # Find generated APK
+          APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" -type f | head -n 1)
+          if [ -z "$APK_PATH" ] || [ ! -f "$APK_PATH" ]; then
+            echo "::error::Release APK was not generated!"
+            exit 1
+          fi
+          
+          # Find generated AAB
+          AAB_PATH=$(find app/build/outputs/bundle/release -name "*.aab" -type f | head -n 1)
+          if [ -z "$AAB_PATH" ] || [ ! -f "$AAB_PATH" ]; then
+            echo "::error::Release AAB was not generated!"
+            exit 1
+          fi
+          
+          TARGET_APK="release_artifacts/Veyronis-v${VERSION_NAME}.apk"
+          TARGET_AAB="release_artifacts/Veyronis-v${VERSION_NAME}.aab"
+          
+          cp "$APK_PATH" "$TARGET_APK"
+          cp "$AAB_PATH" "$TARGET_AAB"
+          
+          # Generate SHA256 checksums
+          cd release_artifacts
+          sha256sum "Veyronis-v${VERSION_NAME}.apk" "Veyronis-v${VERSION_NAME}.aab" > SHA256SUMS.txt
+          cd ..
+          
+          echo "Staged Artifacts:"
+          ls -lh release_artifacts/
+
+      - name: Secure Keystore Cleanup
+        if: always()
+        run: |
+          if [ -f "app/release.keystore" ]; then
+            rm -f app/release.keystore
+            echo "Cleaned up app/release.keystore securely from runner disk."
+          fi
+
+      - name: Create GitHub Release and Upload Artifacts
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RAW_TAG }}
+          name: ${{ github.event.inputs.release_title || format('Veyronis {0}', env.RAW_TAG) }}
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+          files: |
+            release_artifacts/Veyronis-v${{ env.VERSION_NAME }}.apk
+            release_artifacts/Veyronis-v${{ env.VERSION_NAME }}.aab
+            release_artifacts/SHA256SUMS.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
