@@ -3,6 +3,8 @@ package com.example.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,6 +24,8 @@ import com.example.ui.AppLanguage
 import com.example.ui.AppSection
 import com.example.ui.Strings
 import com.example.ui.VeyronisViewModel
+import com.example.ui.components.LuxuryDialog
+import com.example.ui.components.LuxuryGradientButton
 import com.example.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -245,61 +249,19 @@ fun TimelineScreen(
         var dilationStr by remember { mutableStateOf(editing.dilationMultiplier.toString()) }
         var divergenceStr by remember { mutableStateOf(editing.divergencePointCosmic?.toString() ?: "") }
 
-        AlertDialog(
+        LuxuryDialog(
             onDismissRequest = { showAddDialog = false },
-            containerColor = VeyronisPanel,
-            title = { Text(if (editing.id == 0L) Strings.get("timeline_add", language) else Strings.get("timeline_edit", language), color = VeyronisTextPrimary) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
-                        value = name,
-                        onValueChange = { name = it },
-                        label = { Text(Strings.get("timeline_name", language)) },
-                        modifier = Modifier.fillMaxWidth().testTag("timeline_name_input"),
-                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = VeyronisSecondary, focusedTextColor = VeyronisTextPrimary, unfocusedTextColor = VeyronisTextPrimary)
-                    )
-                    OutlinedTextField(
-                        value = description,
-                        onValueChange = { description = it },
-                        label = { Text(if (language == AppLanguage.ARABIC) "الوصف والملاحظات" else "Description & Notes") },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = VeyronisSecondary, focusedTextColor = VeyronisTextPrimary, unfocusedTextColor = VeyronisTextPrimary)
-                    )
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(
-                            checked = isCosmicPrime,
-                            onCheckedChange = { isCosmicPrime = it },
-                            colors = CheckboxDefaults.colors(checkedColor = VeyronisSecondary)
-                        )
-                        Text(if (language == AppLanguage.ARABIC) "الخط الزمني المرجعي الكوني الأساسي" else "Is Cosmic Prime Coordinate Baseline", color = VeyronisTextPrimary, style = MaterialTheme.typography.bodySmall)
-                    }
-                    OutlinedTextField(
-                        value = offsetStr,
-                        onValueChange = { offsetStr = it },
-                        label = { Text(Strings.get("timeline_offset", language)) },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = VeyronisSecondary, focusedTextColor = VeyronisTextPrimary, unfocusedTextColor = VeyronisTextPrimary)
-                    )
-                    OutlinedTextField(
-                        value = dilationStr,
-                        onValueChange = { dilationStr = it },
-                        label = { Text(Strings.get("timeline_dilation", language)) },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = VeyronisSecondary, focusedTextColor = VeyronisTextPrimary, unfocusedTextColor = VeyronisTextPrimary)
-                    )
-                    if (!isCosmicPrime) {
-                        OutlinedTextField(
-                            value = divergenceStr,
-                            onValueChange = { divergenceStr = it },
-                            label = { Text(if (language == AppLanguage.ARABIC) "نقطة انشعاب الخط (السنة الكونية)" else "Branch Divergence Point (Cosmic Year)") },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = VeyronisSecondary, focusedTextColor = VeyronisTextPrimary, unfocusedTextColor = VeyronisTextPrimary)
-                        )
-                    }
+            title = if (editing.id == 0L) Strings.get("timeline_add", language) else Strings.get("timeline_edit", language),
+            subtitle = if (editing.id == 0L) (if (language == AppLanguage.ARABIC) "تكوين خط زمني جديد للملحمة" else "Configure new timeline dimension") else editing.name,
+            icon = Icons.Default.HourglassBottom,
+            iconColor = LuxuryAuroraViolet,
+            actionButtons = {
+                TextButton(onClick = { showAddDialog = false }) {
+                    Text(Strings.get("cancel", language), color = LuxuryTextSecondary)
                 }
-            },
-            confirmButton = {
-                Button(
+                Spacer(modifier = Modifier.width(8.dp))
+                LuxuryGradientButton(
+                    text = Strings.get("save", language),
                     onClick = {
                         if (name.isNotBlank()) {
                             val updated = editing.copy(
@@ -314,18 +276,111 @@ fun TimelineScreen(
                             showAddDialog = false
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = VeyronisSecondary),
+                    brush = LuxuryCosmicGradient,
+                    textColor = Color.White,
                     modifier = Modifier.testTag("save_timeline_button")
+                )
+            }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 440.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text(Strings.get("timeline_name", language)) },
+                    modifier = Modifier.fillMaxWidth().testTag("timeline_name_input"),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = LuxuryAuroraViolet,
+                        focusedTextColor = LuxuryTextPrimary,
+                        unfocusedTextColor = LuxuryTextPrimary,
+                        unfocusedContainerColor = LuxurySurfaceElevated,
+                        focusedContainerColor = LuxurySurfaceElevated
+                    )
+                )
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = { description = it },
+                    label = { Text(if (language == AppLanguage.ARABIC) "الوصف والملاحظات" else "Description & Notes") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = LuxuryAuroraViolet,
+                        focusedTextColor = LuxuryTextPrimary,
+                        unfocusedTextColor = LuxuryTextPrimary,
+                        unfocusedContainerColor = LuxurySurfaceElevated,
+                        focusedContainerColor = LuxurySurfaceElevated
+                    )
+                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(LuxurySurfaceElevated, RoundedCornerShape(12.dp))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
-                    Text(Strings.get("save", language), color = VeyronisBackground)
+                    Checkbox(
+                        checked = isCosmicPrime,
+                        onCheckedChange = { isCosmicPrime = it },
+                        colors = CheckboxDefaults.colors(checkedColor = LuxuryAuroraViolet)
+                    )
+                    Text(
+                        text = if (language == AppLanguage.ARABIC) "الخط الزمني المرجعي الكوني الأساسي" else "Is Cosmic Prime Coordinate Baseline",
+                        color = LuxuryTextPrimary,
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
-            },
-            dismissButton = {
-                TextButton(onClick = { showAddDialog = false }) {
-                    Text(Strings.get("cancel", language), color = VeyronisTextSecondary)
+                OutlinedTextField(
+                    value = offsetStr,
+                    onValueChange = { offsetStr = it },
+                    label = { Text(Strings.get("timeline_offset", language)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = LuxuryAuroraViolet,
+                        focusedTextColor = LuxuryTextPrimary,
+                        unfocusedTextColor = LuxuryTextPrimary,
+                        unfocusedContainerColor = LuxurySurfaceElevated,
+                        focusedContainerColor = LuxurySurfaceElevated
+                    )
+                )
+                OutlinedTextField(
+                    value = dilationStr,
+                    onValueChange = { dilationStr = it },
+                    label = { Text(Strings.get("timeline_dilation", language)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = LuxuryAuroraViolet,
+                        focusedTextColor = LuxuryTextPrimary,
+                        unfocusedTextColor = LuxuryTextPrimary,
+                        unfocusedContainerColor = LuxurySurfaceElevated,
+                        focusedContainerColor = LuxurySurfaceElevated
+                    )
+                )
+                if (!isCosmicPrime) {
+                    OutlinedTextField(
+                        value = divergenceStr,
+                        onValueChange = { divergenceStr = it },
+                        label = { Text(if (language == AppLanguage.ARABIC) "نقطة انشعاب الخط (السنة الكونية)" else "Branch Divergence Point (Cosmic Year)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = LuxuryAuroraViolet,
+                            focusedTextColor = LuxuryTextPrimary,
+                            unfocusedTextColor = LuxuryTextPrimary,
+                            unfocusedContainerColor = LuxurySurfaceElevated,
+                            focusedContainerColor = LuxurySurfaceElevated
+                        )
+                    )
                 }
             }
-        )
+        }
     }
 }
 

@@ -23,6 +23,8 @@ import com.example.data.model.StoryEvent
 import com.example.ui.AppLanguage
 import com.example.ui.Strings
 import com.example.ui.VeyronisViewModel
+import com.example.ui.components.LuxuryDialog
+import com.example.ui.components.LuxuryGradientButton
 import com.example.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -149,43 +151,39 @@ fun EventsScreen(
         val ev = selectedEvent!!
         val timeline = allTimelines.find { it.id == ev.timelineId }
 
-        AlertDialog(
+        LuxuryDialog(
             onDismissRequest = { selectedEvent = null },
-            containerColor = VeyronisPanel,
-            title = {
-                Text(text = ev.title, color = VeyronisTextPrimary, fontWeight = FontWeight.Bold)
-            },
-            text = {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 450.dp)
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Text(
-                        text = "${Strings.get("events_timestamp", language)}: ${ev.cosmicTimestamp} • ${Strings.get("timeline_title", language)}: ${timeline?.name ?: if (language == AppLanguage.ARABIC) "الرئيسي" else "Prime"}",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = VeyronisTertiary,
-                        fontWeight = FontWeight.Bold
-                    )
-                    if (ev.summary.isNotBlank()) {
-                        Text(text = ev.summary, style = MaterialTheme.typography.bodyMedium, color = VeyronisTextPrimary)
-                    }
-                    HorizontalDivider(color = VeyronisSurfaceHighlight)
-                    if (ev.locationNames.isNotBlank()) DetailSectionItem(Strings.get("events_locations", language), ev.locationNames)
-                    if (ev.causes.isNotBlank()) DetailSectionItem(Strings.get("events_causes", language), ev.causes)
-                    if (ev.consequences.isNotBlank()) DetailSectionItem(Strings.get("events_consequences", language), ev.consequences)
-                    if (ev.relatedLore.isNotBlank()) DetailSectionItem(if (language == AppLanguage.ARABIC) "المعارف المرتبطة" else "Related Lore", ev.relatedLore)
-                    if (ev.notes.isNotBlank()) DetailSectionItem(if (language == AppLanguage.ARABIC) "ملاحظات" else "Notes", ev.notes)
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { selectedEvent = null }) {
-                    Text(Strings.get("close", language), color = VeyronisPrimary)
-                }
+            title = ev.title,
+            subtitle = "${Strings.get("events_timestamp", language)}: ${ev.cosmicTimestamp} • ${timeline?.name ?: if (language == AppLanguage.ARABIC) "الرئيسي" else "Prime"}",
+            icon = Icons.Default.Timeline,
+            iconColor = LuxuryCosmicRose,
+            actionButtons = {
+                LuxuryGradientButton(
+                    text = Strings.get("close", language),
+                    onClick = { selectedEvent = null },
+                    brush = LuxuryRoseGradient,
+                    textColor = Color.White
+                )
             }
-        )
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 420.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                if (ev.summary.isNotBlank()) {
+                    Text(text = ev.summary, style = MaterialTheme.typography.bodyMedium, color = LuxuryTextPrimary)
+                }
+                HorizontalDivider(color = LuxurySurfaceHighlight)
+                if (ev.locationNames.isNotBlank()) DetailSectionItem(Strings.get("events_locations", language), ev.locationNames)
+                if (ev.causes.isNotBlank()) DetailSectionItem(Strings.get("events_causes", language), ev.causes)
+                if (ev.consequences.isNotBlank()) DetailSectionItem(Strings.get("events_consequences", language), ev.consequences)
+                if (ev.relatedLore.isNotBlank()) DetailSectionItem(if (language == AppLanguage.ARABIC) "المعارف المرتبطة" else "Related Lore", ev.relatedLore)
+                if (ev.notes.isNotBlank()) DetailSectionItem(if (language == AppLanguage.ARABIC) "ملاحظات" else "Notes", ev.notes)
+            }
+        }
     }
 
     // Add / Edit Dialog
@@ -201,80 +199,19 @@ fun EventsScreen(
         var consequences by remember { mutableStateOf(editing.consequences) }
         var notes by remember { mutableStateOf(editing.notes) }
 
-        AlertDialog(
+        LuxuryDialog(
             onDismissRequest = { showEditDialog = false },
-            containerColor = VeyronisPanel,
-            title = { Text(if (editing.id == 0L) Strings.get("events_add", language) else Strings.get("events_edit", language), color = VeyronisTextPrimary) },
-            text = {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 480.dp)
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedTextField(
-                        value = title,
-                        onValueChange = { title = it },
-                        label = { Text(Strings.get("events_name", language)) },
-                        modifier = Modifier.fillMaxWidth().testTag("event_title_input"),
-                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFFE879F9), focusedTextColor = VeyronisTextPrimary, unfocusedTextColor = VeyronisTextPrimary)
-                    )
-                    OutlinedTextField(
-                        value = summary,
-                        onValueChange = { summary = it },
-                        label = { Text(if (language == AppLanguage.ARABIC) "الملخص" else "Summary") },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFFE879F9), focusedTextColor = VeyronisTextPrimary, unfocusedTextColor = VeyronisTextPrimary)
-                    )
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
-                            value = cosmicTimeStr,
-                            onValueChange = { cosmicTimeStr = it },
-                            label = { Text(Strings.get("events_timestamp", language)) },
-                            modifier = Modifier.weight(1f),
-                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFFE879F9), focusedTextColor = VeyronisTextPrimary, unfocusedTextColor = VeyronisTextPrimary)
-                        )
-                        OutlinedTextField(
-                            value = durationStr,
-                            onValueChange = { durationStr = it },
-                            label = { Text(if (language == AppLanguage.ARABIC) "المدة (سنوات)" else "Duration (Years)") },
-                            modifier = Modifier.weight(1f),
-                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFFE879F9), focusedTextColor = VeyronisTextPrimary, unfocusedTextColor = VeyronisTextPrimary)
-                        )
-                    }
-                    OutlinedTextField(
-                        value = locationNames,
-                        onValueChange = { locationNames = it },
-                        label = { Text(Strings.get("events_locations", language)) },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFFE879F9), focusedTextColor = VeyronisTextPrimary, unfocusedTextColor = VeyronisTextPrimary)
-                    )
-                    OutlinedTextField(
-                        value = causes,
-                        onValueChange = { causes = it },
-                        label = { Text(Strings.get("events_causes", language)) },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFFE879F9), focusedTextColor = VeyronisTextPrimary, unfocusedTextColor = VeyronisTextPrimary)
-                    )
-                    OutlinedTextField(
-                        value = consequences,
-                        onValueChange = { consequences = it },
-                        label = { Text(Strings.get("events_consequences", language)) },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFFE879F9), focusedTextColor = VeyronisTextPrimary, unfocusedTextColor = VeyronisTextPrimary)
-                    )
-                    OutlinedTextField(
-                        value = notes,
-                        onValueChange = { notes = it },
-                        label = { Text(if (language == AppLanguage.ARABIC) "ملاحظات" else "Notes") },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFFE879F9), focusedTextColor = VeyronisTextPrimary, unfocusedTextColor = VeyronisTextPrimary)
-                    )
+            title = if (editing.id == 0L) Strings.get("events_add", language) else Strings.get("events_edit", language),
+            subtitle = if (editing.id == 0L) (if (language == AppLanguage.ARABIC) "إضافة حدث تاريخي جديد" else "Record new historical event") else editing.title,
+            icon = if (editing.id == 0L) Icons.Default.Add else Icons.Default.Edit,
+            iconColor = LuxuryCosmicRose,
+            actionButtons = {
+                TextButton(onClick = { showEditDialog = false }) {
+                    Text(Strings.get("cancel", language), color = LuxuryTextSecondary)
                 }
-            },
-            confirmButton = {
-                Button(
+                Spacer(modifier = Modifier.width(8.dp))
+                LuxuryGradientButton(
+                    text = Strings.get("save", language),
                     onClick = {
                         if (title.isNotBlank()) {
                             val updated = editing.copy(
@@ -292,18 +229,135 @@ fun EventsScreen(
                             showEditDialog = false
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE879F9)),
+                    brush = LuxuryRoseGradient,
+                    textColor = Color.White,
                     modifier = Modifier.testTag("save_event_button")
-                ) {
-                    Text(Strings.get("save", language), color = VeyronisBackground)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showEditDialog = false }) {
-                    Text(Strings.get("cancel", language), color = VeyronisTextSecondary)
-                }
+                )
             }
-        )
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 440.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text(Strings.get("events_name", language)) },
+                    modifier = Modifier.fillMaxWidth().testTag("event_title_input"),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = LuxuryCosmicRose,
+                        focusedTextColor = LuxuryTextPrimary,
+                        unfocusedTextColor = LuxuryTextPrimary,
+                        unfocusedContainerColor = LuxurySurfaceElevated,
+                        focusedContainerColor = LuxurySurfaceElevated
+                    )
+                )
+                OutlinedTextField(
+                    value = summary,
+                    onValueChange = { summary = it },
+                    label = { Text(if (language == AppLanguage.ARABIC) "الملخص" else "Summary") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = LuxuryCosmicRose,
+                        focusedTextColor = LuxuryTextPrimary,
+                        unfocusedTextColor = LuxuryTextPrimary,
+                        unfocusedContainerColor = LuxurySurfaceElevated,
+                        focusedContainerColor = LuxurySurfaceElevated
+                    )
+                )
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = cosmicTimeStr,
+                        onValueChange = { cosmicTimeStr = it },
+                        label = { Text(Strings.get("events_timestamp", language)) },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = LuxuryCosmicRose,
+                            focusedTextColor = LuxuryTextPrimary,
+                            unfocusedTextColor = LuxuryTextPrimary,
+                            unfocusedContainerColor = LuxurySurfaceElevated,
+                            focusedContainerColor = LuxurySurfaceElevated
+                        )
+                    )
+                    OutlinedTextField(
+                        value = durationStr,
+                        onValueChange = { durationStr = it },
+                        label = { Text(if (language == AppLanguage.ARABIC) "المدة (سنوات)" else "Duration (Years)") },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = LuxuryCosmicRose,
+                            focusedTextColor = LuxuryTextPrimary,
+                            unfocusedTextColor = LuxuryTextPrimary,
+                            unfocusedContainerColor = LuxurySurfaceElevated,
+                            focusedContainerColor = LuxurySurfaceElevated
+                        )
+                    )
+                }
+                OutlinedTextField(
+                    value = locationNames,
+                    onValueChange = { locationNames = it },
+                    label = { Text(Strings.get("events_locations", language)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = LuxuryCosmicRose,
+                        focusedTextColor = LuxuryTextPrimary,
+                        unfocusedTextColor = LuxuryTextPrimary,
+                        unfocusedContainerColor = LuxurySurfaceElevated,
+                        focusedContainerColor = LuxurySurfaceElevated
+                    )
+                )
+                OutlinedTextField(
+                    value = causes,
+                    onValueChange = { causes = it },
+                    label = { Text(Strings.get("events_causes", language)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = LuxuryCosmicRose,
+                        focusedTextColor = LuxuryTextPrimary,
+                        unfocusedTextColor = LuxuryTextPrimary,
+                        unfocusedContainerColor = LuxurySurfaceElevated,
+                        focusedContainerColor = LuxurySurfaceElevated
+                    )
+                )
+                OutlinedTextField(
+                    value = consequences,
+                    onValueChange = { consequences = it },
+                    label = { Text(Strings.get("events_consequences", language)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = LuxuryCosmicRose,
+                        focusedTextColor = LuxuryTextPrimary,
+                        unfocusedTextColor = LuxuryTextPrimary,
+                        unfocusedContainerColor = LuxurySurfaceElevated,
+                        focusedContainerColor = LuxurySurfaceElevated
+                    )
+                )
+                OutlinedTextField(
+                    value = notes,
+                    onValueChange = { notes = it },
+                    label = { Text(if (language == AppLanguage.ARABIC) "ملاحظات" else "Notes") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = LuxuryCosmicRose,
+                        focusedTextColor = LuxuryTextPrimary,
+                        unfocusedTextColor = LuxuryTextPrimary,
+                        unfocusedContainerColor = LuxurySurfaceElevated,
+                        focusedContainerColor = LuxurySurfaceElevated
+                    )
+                )
+            }
+        }
     }
 }
 

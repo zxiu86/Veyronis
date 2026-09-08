@@ -44,6 +44,7 @@ class VeyronisViewModel(application: Application) : AndroidViewModel(application
     private val database = AppDatabase.getDatabase(application, viewModelScope)
     val repository = VeyronisRepository(database)
 
+    val centralEntityEngine = CentralEntityEngine()
     val consistencyEngine = TemporalConsistencyEngine()
     val lexiconEngine = LexiconEngine()
     val exportEngine = ExportEngine()
@@ -70,11 +71,11 @@ class VeyronisViewModel(application: Application) : AndroidViewModel(application
         _currentSection.value = section
     }
 
-    // Hierarchy State
-    val allSeries = repository.allSeries.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-    val allBooks = repository.allBooks.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-    val allChapters = repository.allChapters.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-    val allScenes = repository.allScenes.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    // Hierarchy State - In-memory hot cache for instant navigation
+    val allSeries = repository.allSeries.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    val allBooks = repository.allBooks.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    val allChapters = repository.allChapters.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    val allScenes = repository.allScenes.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     private val _selectedSeriesId = MutableStateFlow<Long?>(null)
     val selectedSeriesId: StateFlow<Long?> = _selectedSeriesId.asStateFlow()
@@ -88,24 +89,42 @@ class VeyronisViewModel(application: Application) : AndroidViewModel(application
     private val _selectedSceneId = MutableStateFlow<Long?>(null)
     val selectedSceneId: StateFlow<Long?> = _selectedSceneId.asStateFlow()
 
-    // Character, Codex, Lexicon
-    val allCharacters = repository.allCharacters.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-    val allRelationships = repository.allRelationships.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-    val allCodexEntries = repository.allCodexEntries.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-    val allLexiconTerms = repository.allLexiconTerms.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    // Character, Codex, Lexicon - Hot in-memory caches
+    val allCharacters = repository.allCharacters.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    val allRelationships = repository.allRelationships.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    val allCodexEntries = repository.allCodexEntries.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    val allLexiconTerms = repository.allLexiconTerms.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     // Timeline, World Rules, Events, Causal
-    val allTimelines = repository.allTimelines.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-    val allWorldRules = repository.allWorldRules.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-    val allStoryEvents = repository.allStoryEvents.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-    val allCausalEdges = repository.allCausalEdges.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val allTimelines = repository.allTimelines.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    val allWorldRules = repository.allWorldRules.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    val allStoryEvents = repository.allStoryEvents.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    val allCausalEdges = repository.allCausalEdges.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    // Universal Entities: Locations, Decisions, Universal Relationships
+    val allLocations = repository.allLocations.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    val allDecisions = repository.allDecisions.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    val allUniversalRelationships = repository.allUniversalRelationships.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    // Targeted Navigation & Deep Inspection State
+    private val _inspectedEntity = MutableStateFlow<Pair<EntityType, Long>?>(null)
+    val inspectedEntity: StateFlow<Pair<EntityType, Long>?> = _inspectedEntity.asStateFlow()
+
+    fun inspectEntity(type: EntityType, id: Long) {
+        _inspectedEntity.value = Pair(type, id)
+    }
+
+    fun clearInspectedEntity() {
+        _inspectedEntity.value = null
+    }
 
     // Consistency Warnings (Combine data sources)
     val temporalWarnings: StateFlow<List<TemporalWarning>> = combine(
         combine(allCharacters, allStoryEvents, allScenes) { c, e, s -> Triple(c, e, s) },
-        combine(allTimelines, allWorldRules, allCausalEdges) { t, w, ed -> Triple(t, w, ed) }
-    ) { (chars, evs, scs), (tls, rules, edges) ->
-        consistencyEngine.analyzeContinuity(chars, evs, scs, tls, rules, edges)
+        combine(allTimelines, allWorldRules, allCausalEdges) { t, w, ed -> Triple(t, w, ed) },
+        combine(allDecisions, allUniversalRelationships) { d, r -> Pair(d, r) }
+    ) { (chars, evs, scs), (tls, rules, edges), (decisions, rels) ->
+        consistencyEngine.analyzeContinuity(chars, evs, scs, tls, rules, edges, decisions, rels)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // Editor state
@@ -123,6 +142,47 @@ class VeyronisViewModel(application: Application) : AndroidViewModel(application
 
     private val _lastSavedTime = MutableStateFlow(System.currentTimeMillis())
     val lastSavedTime: StateFlow<Long> = _lastSavedTime.asStateFlow()
+
+    // Smart Context Panel in Editor: Live Detected Entity Matches & Suggestions
+    val currentSceneDetectedMatches: StateFlow<List<DetectedEntityMatch>> = combine(
+        combine(_editorContent, allCharacters, allLocations) { content, chars, locs -> Triple(content, chars, locs) },
+        combine(allCodexEntries, allLexiconTerms, allStoryEvents) { codex, lexicon, events -> Triple(codex, lexicon, events) }
+    ) { (content, chars, locs), (codex, lexicon, events) ->
+        centralEntityEngine.scanTextForEntities(
+            text = content,
+            characters = chars,
+            locations = locs,
+            codexEntries = codex,
+            lexiconTerms = lexicon,
+            events = events
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val currentSceneSuggestions: StateFlow<List<UniversalRelationship>> = combine(
+        _currentEditingScene, currentSceneDetectedMatches, allUniversalRelationships
+    ) { scene, matches, rels ->
+        if (scene == null) emptyList()
+        else centralEntityEngine.generateSuggestionsForScene(scene, matches, rels)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Universe-wide Graph Data
+    val universeGraphData: StateFlow<UniverseGraphData> = combine(
+        combine(allCharacters, allLocations, allStoryEvents) { c, l, e -> Triple(c, l, e) },
+        combine(allCodexEntries, allUniversalRelationships, allCausalEdges, allRelationships) { cd, ur, ce, cr ->
+            Tuple4(cd, ur, ce, cr)
+        }
+    ) { (chars, locs, evts), (codex, ur, ce, cr) ->
+        centralEntityEngine.buildUniverseGraphData(
+            characters = chars,
+            locations = locs,
+            events = evts,
+            codexEntries = codex,
+            universalRelationships = ur,
+            causalEdges = ce,
+            characterRelationships = cr
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UniverseGraphData(emptyList(), emptyList()))
+
 
     // Undo / Redo stacks
     private val undoStack = mutableListOf<String>()
@@ -632,6 +692,195 @@ class VeyronisViewModel(application: Application) : AndroidViewModel(application
     fun deleteCausalEdge(edge: CausalEdge) {
         viewModelScope.launch {
             repository.deleteCausalEdge(edge)
+        }
+    }
+
+    // Universal Relationships Operations
+    fun confirmUniversalRelationship(id: Long) {
+        viewModelScope.launch {
+            repository.confirmUniversalRelationship(id)
+        }
+    }
+
+    fun confirmSuggestion(suggestion: UniversalRelationship) {
+        viewModelScope.launch {
+            if (suggestion.id == 0L) {
+                repository.insertUniversalRelationship(suggestion.copy(status = "Confirmed"))
+            } else {
+                repository.confirmUniversalRelationship(suggestion.id)
+            }
+        }
+    }
+
+    fun dismissUniversalRelationship(id: Long) {
+        viewModelScope.launch {
+            repository.dismissUniversalRelationship(id)
+        }
+    }
+
+    fun addUniversalRelationship(
+        sourceType: EntityType,
+        sourceId: Long,
+        targetType: EntityType,
+        targetId: Long,
+        relationType: String,
+        notes: String = "",
+        intensity: Int = 3
+    ) {
+        viewModelScope.launch {
+            repository.insertUniversalRelationship(
+                UniversalRelationship(
+                    sourceType = sourceType.name,
+                    sourceId = sourceId,
+                    targetType = targetType.name,
+                    targetId = targetId,
+                    relationType = relationType,
+                    status = "Confirmed",
+                    notes = notes,
+                    intensity = intensity
+                )
+            )
+        }
+    }
+
+    fun deleteUniversalRelationship(rel: UniversalRelationship) {
+        viewModelScope.launch {
+            repository.deleteUniversalRelationship(rel)
+        }
+    }
+
+    // Location CRUD
+    fun saveLocation(location: StoryLocation) {
+        viewModelScope.launch {
+            if (location.id == 0L) {
+                repository.insertLocation(location)
+            } else {
+                repository.updateLocation(location)
+            }
+        }
+    }
+
+    fun deleteLocation(location: StoryLocation) {
+        viewModelScope.launch {
+            repository.deleteLocation(location)
+        }
+    }
+
+    // Decision CRUD
+    fun saveDecision(decision: StoryDecision) {
+        viewModelScope.launch {
+            if (decision.id == 0L) {
+                repository.insertDecision(decision)
+            } else {
+                repository.updateDecision(decision)
+            }
+        }
+    }
+
+    fun deleteDecision(decision: StoryDecision) {
+        viewModelScope.launch {
+            repository.deleteDecision(decision)
+        }
+    }
+
+    // Rename Entity with Reference Propagation
+    fun renameCharacter(character: Character, newName: String) {
+        viewModelScope.launch {
+            val oldName = character.name
+            val updated = character.copy(name = newName)
+            repository.updateCharacter(updated)
+
+            // Update matching Lexicon terms if any
+            val lexiconMatch = allLexiconTerms.value.find { it.term.equals(oldName, ignoreCase = true) }
+            if (lexiconMatch != null) {
+                repository.updateLexiconTerm(lexiconMatch.copy(term = newName))
+            }
+        }
+    }
+
+    fun renameLocation(location: StoryLocation, newName: String) {
+        viewModelScope.launch {
+            val oldName = location.name
+            val updated = location.copy(name = newName)
+            repository.updateLocation(updated)
+
+            // Update matching Lexicon terms if any
+            val lexiconMatch = allLexiconTerms.value.find { it.term.equals(oldName, ignoreCase = true) }
+            if (lexiconMatch != null) {
+                repository.updateLexiconTerm(lexiconMatch.copy(term = newName))
+            }
+        }
+    }
+
+    // Cross-Tool Navigation: seamlessly jumps to the appropriate tool with the entity selected
+    fun navigateToEntity(entityType: EntityType, entityId: Long) {
+        when (entityType) {
+            EntityType.CHARACTER -> {
+                inspectEntity(EntityType.CHARACTER, entityId)
+                navigateTo(AppSection.CHARACTERS)
+            }
+            EntityType.LOCATION -> {
+                inspectEntity(EntityType.LOCATION, entityId)
+                navigateTo(AppSection.CODEX)
+            }
+            EntityType.EVENT -> {
+                inspectEntity(EntityType.EVENT, entityId)
+                navigateTo(AppSection.EVENTS)
+            }
+            EntityType.SCENE -> {
+                val scene = allScenes.value.find { it.id == entityId }
+                if (scene != null) {
+                    val chapter = allChapters.value.find { it.id == scene.chapterId }
+                    if (chapter != null) {
+                        val book = allBooks.value.find { it.id == chapter.bookId }
+                        if (book != null) {
+                            _selectedSeriesId.value = book.seriesId
+                            _selectedBookId.value = book.id
+                            _selectedChapterId.value = chapter.id
+                        }
+                    }
+                    selectScene(scene)
+                    navigateTo(AppSection.WRITER)
+                }
+            }
+            EntityType.CHAPTER -> {
+                val chapter = allChapters.value.find { it.id == entityId }
+                if (chapter != null) {
+                    selectChapter(chapter.id)
+                    navigateTo(AppSection.WRITER)
+                }
+            }
+            EntityType.BOOK -> {
+                val book = allBooks.value.find { it.id == entityId }
+                if (book != null) {
+                    selectBook(book.id)
+                    navigateTo(AppSection.WRITER)
+                }
+            }
+            EntityType.SERIES -> {
+                selectSeries(entityId)
+                navigateTo(AppSection.WRITER)
+            }
+            EntityType.CODEX -> {
+                inspectEntity(EntityType.CODEX, entityId)
+                navigateTo(AppSection.CODEX)
+            }
+            EntityType.LEXICON -> {
+                inspectEntity(EntityType.LEXICON, entityId)
+                navigateTo(AppSection.CODEX)
+            }
+            EntityType.TIMELINE -> {
+                inspectEntity(EntityType.TIMELINE, entityId)
+                navigateTo(AppSection.TIMELINE)
+            }
+            EntityType.WORLD_RULE -> {
+                inspectEntity(EntityType.WORLD_RULE, entityId)
+                navigateTo(AppSection.WORLD_RULES)
+            }
+            EntityType.DECISION -> {
+                inspectEntity(EntityType.DECISION, entityId)
+                navigateTo(AppSection.EVENTS)
+            }
         }
     }
 

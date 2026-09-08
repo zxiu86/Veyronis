@@ -51,6 +51,7 @@ val VeyronisSecondaryContainer = LuxurySecondaryContainer
 val LuxuryGold = Color(0xFFFBBF24)                // Radiant Celestial Gold
 val LuxuryGoldContainer = Color(0xFF45300B)       // Rich bronze container
 val LuxuryRose = Color(0xFFFB7185)                // Soft glowing rose
+val LuxuryCosmicRose = Color(0xFFE879F9)          // Glowing cosmic magenta rose
 
 val VeyronisTertiary = LuxuryGold
 val VeyronisTertiaryContainer = LuxuryGoldContainer
@@ -87,6 +88,14 @@ val LuxuryPrimaryGradient = Brush.horizontalGradient(
 
 val LuxurySecondaryGradient = Brush.horizontalGradient(
     colors = listOf(Color(0xFF7C3AED), Color(0xFFA78BFA), Color(0xFFC084FC))
+)
+
+val LuxuryCosmicGradient = Brush.horizontalGradient(
+    colors = listOf(Color(0xFF7C3AED), Color(0xFFA78BFA), Color(0xFFE879F9))
+)
+
+val LuxuryRoseGradient = Brush.horizontalGradient(
+    colors = listOf(Color(0xFFBE185D), Color(0xFFFB7185), Color(0xFFFDA4AF))
 )
 
 val LuxuryGoldGradient = Brush.horizontalGradient(

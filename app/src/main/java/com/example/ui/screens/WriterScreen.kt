@@ -4,6 +4,7 @@ import androidx.compose.animation.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -34,18 +35,22 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.model.Book
 import com.example.data.model.Chapter
+import com.example.data.model.EntityType
 import com.example.data.model.Scene
 import com.example.data.model.Series
+import com.example.domain.DetectedEntityMatch
 import com.example.domain.TermOccurrence
 import com.example.ui.AppLanguage
 import com.example.ui.Strings
 import com.example.ui.VeyronisViewModel
+import com.example.ui.components.AddUniversalRelationshipDialog
 import com.example.ui.components.BookCoverCard
 import com.example.ui.components.LuxuryCoverPicker
 import com.example.ui.components.LuxuryStepPill
 import com.example.ui.components.LuxuryGradientButton
 import com.example.ui.components.LuxurySecondaryButton
 import com.example.ui.components.LuxuryGlassCard
+import com.example.ui.components.UniversalEntityInspectorSheet
 import com.example.ui.theme.*
 
 enum class WriterWorkflowStep {
@@ -446,52 +451,19 @@ fun WriterScreen(
 
     // DIALOG: Create Chapter
     if (showCreateChapterDialog) {
-        AlertDialog(
+        com.example.ui.components.LuxuryDialog(
             onDismissRequest = { showCreateChapterDialog = false },
-            containerColor = VeyronisPanel,
-            title = {
-                Text(
-                    text = Strings.get("create_chapter", language),
-                    color = VeyronisTextPrimary,
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    OutlinedTextField(
-                        value = newChapterTitle,
-                        onValueChange = { newChapterTitle = it },
-                        label = { Text(Strings.get("chapter_name", language)) },
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = VeyronisPrimary,
-                            focusedTextColor = VeyronisTextPrimary,
-                            unfocusedTextColor = VeyronisTextPrimary,
-                            unfocusedContainerColor = VeyronisPanelVariant,
-                            focusedContainerColor = VeyronisPanelVariant
-                        ),
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("new_chapter_title_input")
-                    )
-                    OutlinedTextField(
-                        value = newChapterSummary,
-                        onValueChange = { newChapterSummary = it },
-                        label = { Text(Strings.get("chapter_desc", language)) },
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = VeyronisPrimary,
-                            focusedTextColor = VeyronisTextPrimary,
-                            unfocusedTextColor = VeyronisTextPrimary,
-                            unfocusedContainerColor = VeyronisPanelVariant,
-                            focusedContainerColor = VeyronisPanelVariant
-                        ),
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    )
+            title = Strings.get("create_chapter", language),
+            subtitle = if (language == AppLanguage.ARABIC) "إضافة فصل جديد في الرواية الحالية" else "Add a new chapter in current book",
+            icon = Icons.AutoMirrored.Filled.MenuBook,
+            iconColor = LuxuryPrimary,
+            actionButtons = {
+                TextButton(onClick = { showCreateChapterDialog = false }) {
+                    Text(Strings.get("cancel", language), color = LuxuryTextSecondary)
                 }
-            },
-            confirmButton = {
-                Button(
+                Spacer(modifier = Modifier.width(8.dp))
+                LuxuryGradientButton(
+                    text = Strings.get("save", language),
                     onClick = {
                         if (newChapterTitle.isNotBlank()) {
                             viewModel.createChapter(newChapterTitle, newChapterSummary)
@@ -500,52 +472,60 @@ fun WriterScreen(
                             showCreateChapterDialog = false
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = VeyronisPrimary),
                     modifier = Modifier.testTag("confirm_create_chapter_btn")
-                ) {
-                    Text(Strings.get("save", language), color = VeyronisBackground, fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showCreateChapterDialog = false }) {
-                    Text(Strings.get("cancel", language), color = VeyronisTextSecondary)
-                }
+                )
             }
-        )
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                OutlinedTextField(
+                    value = newChapterTitle,
+                    onValueChange = { newChapterTitle = it },
+                    label = { Text(Strings.get("chapter_name", language)) },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = LuxuryPrimary,
+                        focusedTextColor = LuxuryTextPrimary,
+                        unfocusedTextColor = LuxuryTextPrimary,
+                        unfocusedContainerColor = LuxurySurfaceElevated,
+                        focusedContainerColor = LuxurySurfaceElevated
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("new_chapter_title_input")
+                )
+                OutlinedTextField(
+                    value = newChapterSummary,
+                    onValueChange = { newChapterSummary = it },
+                    label = { Text(Strings.get("chapter_desc", language)) },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = LuxuryPrimary,
+                        focusedTextColor = LuxuryTextPrimary,
+                        unfocusedTextColor = LuxuryTextPrimary,
+                        unfocusedContainerColor = LuxurySurfaceElevated,
+                        focusedContainerColor = LuxurySurfaceElevated
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
     }
 
     // DIALOG: Create Scene
     if (showCreateSceneDialog) {
-        AlertDialog(
+        com.example.ui.components.LuxuryDialog(
             onDismissRequest = { showCreateSceneDialog = false },
-            containerColor = VeyronisPanel,
-            title = {
-                Text(
-                    text = Strings.get("create_scene", language),
-                    color = VeyronisTextPrimary,
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            text = {
-                OutlinedTextField(
-                    value = newSceneTitle,
-                    onValueChange = { newSceneTitle = it },
-                    label = { Text(Strings.get("scene_name", language)) },
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = VeyronisPrimary,
-                        focusedTextColor = VeyronisTextPrimary,
-                        unfocusedTextColor = VeyronisTextPrimary,
-                        unfocusedContainerColor = VeyronisPanelVariant,
-                        focusedContainerColor = VeyronisPanelVariant
-                    ),
-                    shape = RoundedCornerShape(10.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("new_scene_title_input")
-                )
-            },
-            confirmButton = {
-                Button(
+            title = Strings.get("create_scene", language),
+            subtitle = if (language == AppLanguage.ARABIC) "بدء مشهد كتابة جديد" else "Start a new writing scene",
+            icon = Icons.Default.Description,
+            iconColor = LuxuryAuroraViolet,
+            actionButtons = {
+                TextButton(onClick = { showCreateSceneDialog = false }) {
+                    Text(Strings.get("cancel", language), color = LuxuryTextSecondary)
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                LuxuryGradientButton(
+                    text = Strings.get("save", language),
                     onClick = {
                         if (newSceneTitle.isNotBlank()) {
                             viewModel.createScene(newSceneTitle)
@@ -554,62 +534,68 @@ fun WriterScreen(
                             currentStep = WriterWorkflowStep.EDITOR
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = VeyronisPrimary),
                     modifier = Modifier.testTag("confirm_create_scene_btn")
-                ) {
-                    Text(Strings.get("save", language), color = VeyronisBackground, fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showCreateSceneDialog = false }) {
-                    Text(Strings.get("cancel", language), color = VeyronisTextSecondary)
-                }
+                )
             }
-        )
+        ) {
+            OutlinedTextField(
+                value = newSceneTitle,
+                onValueChange = { newSceneTitle = it },
+                label = { Text(Strings.get("scene_name", language)) },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = LuxuryAuroraViolet,
+                    focusedTextColor = LuxuryTextPrimary,
+                    unfocusedTextColor = LuxuryTextPrimary,
+                    unfocusedContainerColor = LuxurySurfaceElevated,
+                    focusedContainerColor = LuxurySurfaceElevated
+                ),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("new_scene_title_input")
+            )
+        }
     }
 
     // DIALOG: Snapshot
     if (showSnapshotDialog) {
-        AlertDialog(
+        com.example.ui.components.LuxuryDialog(
             onDismissRequest = { showSnapshotDialog = false },
-            containerColor = VeyronisPanel,
-            title = {
-                Text("حفظ لقطة إصدار للمشهد", color = VeyronisTextPrimary, fontWeight = FontWeight.Bold)
-            },
-            text = {
-                OutlinedTextField(
-                    value = snapshotNote,
-                    onValueChange = { snapshotNote = it },
-                    label = { Text("ملاحظة النسخة (مثال: قبل تعديل الحوار)") },
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = VeyronisPrimary,
-                        focusedTextColor = VeyronisTextPrimary,
-                        unfocusedTextColor = VeyronisTextPrimary,
-                        unfocusedContainerColor = VeyronisPanelVariant,
-                        focusedContainerColor = VeyronisPanelVariant
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                )
-            },
-            confirmButton = {
-                Button(
+            title = if (language == AppLanguage.ARABIC) "حفظ لقطة إصدار للمشهد" else "Save Scene Snapshot",
+            subtitle = if (language == AppLanguage.ARABIC) "تخليد نسخة من النص الحالي للرجوع إليها في أي وقت" else "Create a restore point for current scene",
+            icon = Icons.Default.History,
+            iconColor = LuxuryCyberIndigo,
+            actionButtons = {
+                TextButton(onClick = { showSnapshotDialog = false }) {
+                    Text(Strings.get("cancel", language), color = LuxuryTextSecondary)
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                LuxuryGradientButton(
+                    text = Strings.get("save", language),
                     onClick = {
-                        val note = snapshotNote.ifBlank { "لقطة حفظ يدوية" }
+                        val note = snapshotNote.ifBlank { if (language == AppLanguage.ARABIC) "لقطة حفظ يدوية" else "Manual snapshot" }
                         viewModel.createManualSnapshot(note)
                         snapshotNote = ""
                         showSnapshotDialog = false
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = VeyronisTertiary)
-                ) {
-                    Text(Strings.get("save", language), color = Color.Black, fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showSnapshotDialog = false }) {
-                    Text(Strings.get("cancel", language), color = VeyronisTextSecondary)
-                }
+                    }
+                )
             }
-        )
+        ) {
+            OutlinedTextField(
+                value = snapshotNote,
+                onValueChange = { snapshotNote = it },
+                label = { Text(if (language == AppLanguage.ARABIC) "ملاحظة النسخة (مثال: قبل تعديل الحوار)" else "Snapshot note") },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = LuxuryCyberIndigo,
+                    focusedTextColor = LuxuryTextPrimary,
+                    unfocusedTextColor = LuxuryTextPrimary,
+                    unfocusedContainerColor = LuxurySurfaceElevated,
+                    focusedContainerColor = LuxurySurfaceElevated
+                ),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
     }
 
     // BottomSheet: Version History
@@ -2447,6 +2433,239 @@ fun FocusedEditorView(
                 .testTag("manuscript_content_editor")
         )
 
+        // Live Smart Context & Universe Integration Hub Bar
+        val detectedEntities by viewModel.currentSceneDetectedMatches.collectAsStateWithLifecycle()
+        val suggestions by viewModel.currentSceneSuggestions.collectAsStateWithLifecycle()
+        val warnings by viewModel.temporalWarnings.collectAsStateWithLifecycle()
+        var contextPanelExpanded by remember { mutableStateOf(false) }
+        var inspectedEntityPair by remember { mutableStateOf<Pair<EntityType, Long>?>(null) }
+        var showAddLinkDialog by remember { mutableStateOf(false) }
+
+        // Filter warnings affecting current scene
+        val sceneWarnings = remember(warnings, currentScene) {
+            if (currentScene == null) emptyList()
+            else warnings.filter { it.description.contains(currentScene.title, ignoreCase = true) }
+        }
+
+        Surface(
+            color = LuxurySurfaceElevated,
+            border = BorderStroke(1.dp, LuxurySurfaceHighlight),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                // Expandable Header Row
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { contextPanelExpanded = !contextPanelExpanded }
+                        .padding(horizontal = 14.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Surface(
+                            color = LuxuryPrimary.copy(alpha = 0.15f),
+                            shape = CircleShape,
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.Hub,
+                                    contentDescription = null,
+                                    tint = LuxuryPrimary,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = if (language == AppLanguage.ARABIC) "سياق المشهد الذكي والارتباطات" else "Smart Scene Context & Entities",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = LuxuryTextPrimary
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        // Match Count Badges
+                        if (detectedEntities.isNotEmpty()) {
+                            Surface(
+                                color = LuxuryPrimaryContainer,
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Text(
+                                    text = "${detectedEntities.size} ${if (language == AppLanguage.ARABIC) "عنصر مرصود" else "detected"}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = LuxuryPrimary,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+
+                        if (suggestions.isNotEmpty()) {
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Surface(
+                                color = LuxuryWarning.copy(alpha = 0.2f),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Text(
+                                    text = "${suggestions.size} ${if (language == AppLanguage.ARABIC) "مقترح ربط" else "suggestions"}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = LuxuryWarning,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+
+                        if (sceneWarnings.isNotEmpty()) {
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Surface(
+                                color = LuxuryWarning.copy(alpha = 0.2f),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Text(
+                                    text = "${sceneWarnings.size} ⚠️",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = LuxuryWarning,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(
+                            onClick = { showAddLinkDialog = true },
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.AddLink,
+                                contentDescription = "Add Link",
+                                tint = LuxuryPrimary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Icon(
+                            imageVector = if (contextPanelExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                            contentDescription = null,
+                            tint = LuxuryTextSecondary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+
+                // Expanded Context Panel Body
+                AnimatedVisibility(visible = contextPanelExpanded) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 6.dp)
+                    ) {
+                        // 1. Pending Suggestions (if any)
+                        if (suggestions.isNotEmpty()) {
+                            Text(
+                                text = if (language == AppLanguage.ARABIC) "اقتراحات الربط التلقائي:" else "Auto-detected Link Suggestions:",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = LuxuryWarning
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                items(suggestions) { sugg ->
+                                    Surface(
+                                        color = LuxurySurfaceElevated,
+                                        shape = RoundedCornerShape(8.dp),
+                                        border = BorderStroke(1.dp, LuxuryWarning.copy(alpha = 0.4f))
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = "${sugg.targetType} #${sugg.targetId} (${sugg.relationType})",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = LuxuryTextPrimary
+                                            )
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            IconButton(
+                                                onClick = { viewModel.confirmSuggestion(sugg) },
+                                                modifier = Modifier.size(22.dp)
+                                            ) {
+                                                Icon(Icons.Default.Check, contentDescription = "Confirm", tint = LuxurySuccess, modifier = Modifier.size(14.dp))
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+
+                        // 2. Detected Entity Badges in Text
+                        if (detectedEntities.isEmpty()) {
+                            Text(
+                                text = if (language == AppLanguage.ARABIC) "اكتب أسماء شخصياتك أو أماكنك أو مصطلحاتك وسيتعرف عليها المحرر تلقائياً." else "Type character, location, or lore names and the editor will detect them in real-time.",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = LuxuryTextMuted
+                            )
+                        } else {
+                            LazyRow(
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                items(detectedEntities) { match ->
+                                    val badgeColor = when (match.entityType) {
+                                        EntityType.CHARACTER -> Color(0xFF38BDF8)
+                                        EntityType.LOCATION -> Color(0xFF10B981)
+                                        EntityType.CODEX -> Color(0xFFF59E0B)
+                                        EntityType.LEXICON -> Color(0xFF06B6D4)
+                                        EntityType.EVENT -> Color(0xFF6366F1)
+                                        else -> LuxuryPrimary
+                                    }
+
+                                    Surface(
+                                        color = badgeColor.copy(alpha = 0.15f),
+                                        shape = RoundedCornerShape(8.dp),
+                                        border = BorderStroke(1.dp, badgeColor.copy(alpha = 0.4f)),
+                                        modifier = Modifier.clickable {
+                                            inspectedEntityPair = Pair(match.entityType, match.entityId)
+                                        }
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(6.dp)
+                                                    .clip(CircleShape)
+                                                    .background(badgeColor)
+                                            )
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(
+                                                text = match.entityName,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = FontWeight.Bold,
+                                                color = LuxuryTextPrimary
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text(
+                                                text = if (language == AppLanguage.ARABIC) match.entityType.labelAr else match.entityType.labelEn,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontSize = 9.sp,
+                                                color = badgeColor
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         // Bottom Live Word Count & Metrics Bar
         Surface(
             color = VeyronisPanel,
@@ -2479,11 +2698,31 @@ fun FocusedEditorView(
                 }
 
                 Text(
-                    text = if (language == AppLanguage.ARABIC) "محرر فيرونيس الذكي" else "Veyronis Smart Editor",
+                    text = if (language == AppLanguage.ARABIC) "محرر فيرونيس المترابط" else "Veyronis Interconnected Editor",
                     style = MaterialTheme.typography.labelSmall,
                     color = VeyronisTextMuted
                 )
             }
+        }
+
+        // Universal Entity Inspector Sheet if an entity was tapped
+        inspectedEntityPair?.let { (type, id) ->
+            UniversalEntityInspectorSheet(
+                viewModel = viewModel,
+                entityType = type,
+                entityId = id,
+                onDismiss = { inspectedEntityPair = null }
+            )
+        }
+
+        // Add Universal Link Dialog
+        if (showAddLinkDialog && currentScene != null) {
+            AddUniversalRelationshipDialog(
+                viewModel = viewModel,
+                sourceType = EntityType.SCENE,
+                sourceId = currentScene.id,
+                onDismiss = { showAddLinkDialog = false }
+            )
         }
     }
 }

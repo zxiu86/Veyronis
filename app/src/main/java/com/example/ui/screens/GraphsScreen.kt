@@ -2,9 +2,12 @@ package com.example.ui.screens
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -31,6 +34,8 @@ import com.example.data.model.StoryEvent
 import com.example.ui.AppLanguage
 import com.example.ui.Strings
 import com.example.ui.VeyronisViewModel
+import com.example.ui.components.LuxuryDialog
+import com.example.ui.components.LuxuryGradientButton
 import com.example.ui.theme.*
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -345,69 +350,120 @@ fun GraphsScreen(
         var targetId by remember { mutableStateOf(allEvents.getOrNull(1)?.id ?: 0L) }
         var relationType by remember { mutableStateOf("Causes") }
 
-        AlertDialog(
+        LuxuryDialog(
             onDismissRequest = { showAddEdgeDialog = false },
-            containerColor = VeyronisPanel,
-            title = { Text(Strings.get("graphs_link_events", language), color = VeyronisTextPrimary) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(if (language == AppLanguage.ARABIC) "حدث المصدر (السبب):" else "Source Event (Cause):", style = MaterialTheme.typography.labelMedium, color = VeyronisTextSecondary)
-                    for (ev in allEvents) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            RadioButton(
-                                selected = sourceId == ev.id,
-                                onClick = { sourceId = ev.id }
-                            )
-                            Text(ev.title, color = VeyronisTextPrimary, style = MaterialTheme.typography.bodySmall)
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(if (language == AppLanguage.ARABIC) "حدث الهدف (النتيجة):" else "Target Event (Effect):", style = MaterialTheme.typography.labelMedium, color = VeyronisTextSecondary)
-                    for (ev in allEvents) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            RadioButton(
-                                selected = targetId == ev.id,
-                                onClick = { targetId = ev.id }
-                            )
-                            Text(ev.title, color = VeyronisTextPrimary, style = MaterialTheme.typography.bodySmall)
-                        }
-                    }
-
-                    OutlinedTextField(
-                        value = relationType,
-                        onValueChange = { relationType = it },
-                        label = { Text(if (language == AppLanguage.ARABIC) "النوع (Causes, Leads To, Conflicts With, Creates)" else "Type (Causes, Leads To, Depends On, Conflicts With, Prevents, Creates)") },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = VeyronisPrimary, focusedTextColor = VeyronisTextPrimary, unfocusedTextColor = VeyronisTextPrimary)
-                    )
+            title = Strings.get("graphs_link_events", language),
+            subtitle = if (language == AppLanguage.ARABIC) "إنشاء رابط سببي بين حدثين في السلسلة" else "Create causal dependency between events",
+            icon = Icons.Default.Timeline,
+            iconColor = LuxuryElectricCyan,
+            actionButtons = {
+                TextButton(onClick = { showAddEdgeDialog = false }) {
+                    Text(Strings.get("cancel", language), color = LuxuryTextSecondary)
                 }
-            },
-            confirmButton = {
-                Button(
+                Spacer(modifier = Modifier.width(8.dp))
+                LuxuryGradientButton(
+                    text = if (language == AppLanguage.ARABIC) "ربط الأحداث" else "Connect Events",
                     onClick = {
                         if (sourceId != targetId && sourceId > 0 && targetId > 0) {
                             viewModel.addCausalEdge(sourceId, targetId, relationType)
                             showAddEdgeDialog = false
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = VeyronisPrimary)
-                ) {
-                    Text(if (language == AppLanguage.ARABIC) "ربط" else "Connect")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showAddEdgeDialog = false }) {
-                    Text(Strings.get("cancel", language), color = VeyronisTextSecondary)
-                }
+                    brush = LuxuryPrimaryGradient,
+                    textColor = LuxuryVoidBackground,
+                    enabled = sourceId != targetId && sourceId > 0 && targetId > 0
+                )
             }
-        )
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 440.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Text(
+                    text = if (language == AppLanguage.ARABIC) "حدث المصدر (السبب):" else "Source Event (Cause):",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = LuxuryElectricCyan,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(LuxurySurfaceElevated, RoundedCornerShape(12.dp))
+                        .padding(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    for (ev in allEvents) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { sourceId = ev.id }
+                                .padding(vertical = 4.dp)
+                        ) {
+                            RadioButton(
+                                selected = sourceId == ev.id,
+                                onClick = { sourceId = ev.id },
+                                colors = RadioButtonDefaults.colors(selectedColor = LuxuryElectricCyan)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(ev.title, color = LuxuryTextPrimary, style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = if (language == AppLanguage.ARABIC) "حدث الهدف (النتيجة):" else "Target Event (Effect):",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = LuxuryAuroraViolet,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(LuxurySurfaceElevated, RoundedCornerShape(12.dp))
+                        .padding(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    for (ev in allEvents) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { targetId = ev.id }
+                                .padding(vertical = 4.dp)
+                        ) {
+                            RadioButton(
+                                selected = targetId == ev.id,
+                                onClick = { targetId = ev.id },
+                                colors = RadioButtonDefaults.colors(selectedColor = LuxuryAuroraViolet)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(ev.title, color = LuxuryTextPrimary, style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+                OutlinedTextField(
+                    value = relationType,
+                    onValueChange = { relationType = it },
+                    label = { Text(if (language == AppLanguage.ARABIC) "نوع الرابط (Causes, Leads To, Conflicts With, Creates)" else "Relation Type") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = LuxuryElectricCyan,
+                        focusedTextColor = LuxuryTextPrimary,
+                        unfocusedTextColor = LuxuryTextPrimary,
+                        unfocusedContainerColor = LuxurySurfaceElevated,
+                        focusedContainerColor = LuxurySurfaceElevated
+                    )
+                )
+            }
+        }
     }
 }
 

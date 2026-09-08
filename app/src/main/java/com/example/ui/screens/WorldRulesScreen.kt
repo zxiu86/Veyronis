@@ -24,6 +24,7 @@ import com.example.domain.WarningSeverity
 import com.example.ui.AppLanguage
 import com.example.ui.Strings
 import com.example.ui.VeyronisViewModel
+import com.example.ui.components.LuxuryDialog
 import com.example.ui.components.LuxuryGlassCard
 import com.example.ui.components.LuxuryGradientButton
 import com.example.ui.theme.*
@@ -266,135 +267,19 @@ fun WorldRulesScreen(
         var energyType by remember { mutableStateOf(editing.energyType) }
         var enablesTimeTravel by remember { mutableStateOf(editing.enablesTimeTravel) }
 
-        AlertDialog(
+        LuxuryDialog(
             onDismissRequest = { showEditRuleDialog = false },
-            containerColor = LuxurySurface,
-            title = {
-                Text(
-                    text = if (editing.id == 0L) Strings.get("worldrules_add", language) else (if (language == AppLanguage.ARABIC) "تعديل قانون" else "Edit Rule"),
-                    color = LuxuryTextPrimary,
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            text = {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 480.dp)
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedTextField(
-                        value = name,
-                        onValueChange = { name = it },
-                        label = { Text(Strings.get("worldrules_name", language) + " *") },
-                        modifier = Modifier.fillMaxWidth().testTag("world_rule_name_input"),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = LuxuryElectricCyan,
-                            focusedTextColor = LuxuryTextPrimary,
-                            unfocusedTextColor = LuxuryTextPrimary,
-                            unfocusedContainerColor = LuxurySurfaceElevated,
-                            focusedContainerColor = LuxurySurfaceElevated
-                        )
-                    )
-                    OutlinedTextField(
-                        value = category,
-                        onValueChange = { category = it },
-                        label = { Text(Strings.get("worldrules_category", language)) },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = LuxuryElectricCyan,
-                            focusedTextColor = LuxuryTextPrimary,
-                            unfocusedTextColor = LuxuryTextPrimary,
-                            unfocusedContainerColor = LuxurySurfaceElevated,
-                            focusedContainerColor = LuxurySurfaceElevated
-                        )
-                    )
-                    OutlinedTextField(
-                        value = description,
-                        onValueChange = { description = it },
-                        label = { Text(if (language == AppLanguage.ARABIC) "الوصف العلمي والقصصي" else "Scientific / Lore Description") },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = LuxuryElectricCyan,
-                            focusedTextColor = LuxuryTextPrimary,
-                            unfocusedTextColor = LuxuryTextPrimary,
-                            unfocusedContainerColor = LuxurySurfaceElevated,
-                            focusedContainerColor = LuxurySurfaceElevated
-                        )
-                    )
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
-                            value = localTimeStr,
-                            onValueChange = { localTimeStr = it },
-                            label = { Text(if (language == AppLanguage.ARABIC) "الثواني المحلية" else "Local Seconds") },
-                            modifier = Modifier.weight(1f),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = LuxuryElectricCyan,
-                                focusedTextColor = LuxuryTextPrimary,
-                                unfocusedTextColor = LuxuryTextPrimary,
-                                unfocusedContainerColor = LuxurySurfaceElevated,
-                                focusedContainerColor = LuxurySurfaceElevated
-                            )
-                        )
-                        OutlinedTextField(
-                            value = externalTimeStr,
-                            onValueChange = { externalTimeStr = it },
-                            label = { Text(if (language == AppLanguage.ARABIC) "السنوات الخارجية" else "External Years") },
-                            modifier = Modifier.weight(1f),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = LuxuryElectricCyan,
-                                focusedTextColor = LuxuryTextPrimary,
-                                unfocusedTextColor = LuxuryTextPrimary,
-                                unfocusedContainerColor = LuxurySurfaceElevated,
-                                focusedContainerColor = LuxurySurfaceElevated
-                            )
-                        )
-                    }
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
-                            value = efficiencyStr,
-                            onValueChange = { efficiencyStr = it },
-                            label = { Text(if (language == AppLanguage.ARABIC) "الكفاءة %" else "Efficiency %") },
-                            modifier = Modifier.weight(1f),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = LuxuryElectricCyan,
-                                focusedTextColor = LuxuryTextPrimary,
-                                unfocusedTextColor = LuxuryTextPrimary,
-                                unfocusedContainerColor = LuxurySurfaceElevated,
-                                focusedContainerColor = LuxurySurfaceElevated
-                            )
-                        )
-                        OutlinedTextField(
-                            value = energyType,
-                            onValueChange = { energyType = it },
-                            label = { Text(if (language == AppLanguage.ARABIC) "نوع الطاقة" else "Energy Medium") },
-                            modifier = Modifier.weight(1f),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = LuxuryElectricCyan,
-                                focusedTextColor = LuxuryTextPrimary,
-                                unfocusedTextColor = LuxuryTextPrimary,
-                                unfocusedContainerColor = LuxurySurfaceElevated,
-                                focusedContainerColor = LuxurySurfaceElevated
-                            )
-                        )
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(
-                            checked = enablesTimeTravel,
-                            onCheckedChange = { enablesTimeTravel = it },
-                            colors = CheckboxDefaults.colors(checkedColor = LuxuryElectricCyan)
-                        )
-                        Text(
-                            text = if (language == AppLanguage.ARABIC) "يتيح حلقة / سفر عبر الزمن مغلق" else "Enables Closed-Timelike Loop / Travel",
-                            color = LuxuryTextPrimary,
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
+            title = if (editing.id == 0L) Strings.get("worldrules_add", language) else (if (language == AppLanguage.ARABIC) "تعديل قانون" else "Edit Rule"),
+            subtitle = if (editing.id == 0L) (if (language == AppLanguage.ARABIC) "إضافة وتحديد قواعد فيزياء وميتافيزيقيا العالم" else "Define new cosmic rule or physics constraint") else editing.name,
+            icon = Icons.Default.Gavel,
+            iconColor = LuxuryElectricCyan,
+            actionButtons = {
+                TextButton(onClick = { showEditRuleDialog = false }) {
+                    Text(Strings.get("cancel", language), color = LuxuryTextSecondary)
                 }
-            },
-            confirmButton = {
-                Button(
+                Spacer(modifier = Modifier.width(8.dp))
+                LuxuryGradientButton(
+                    text = Strings.get("save", language),
                     onClick = {
                         if (name.isNotBlank()) {
                             val updated = editing.copy(
@@ -411,19 +296,141 @@ fun WorldRulesScreen(
                             showEditRuleDialog = false
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = LuxuryElectricCyan),
-                    shape = RoundedCornerShape(10.dp),
+                    brush = LuxuryPrimaryGradient,
+                    textColor = LuxuryVoidBackground,
                     modifier = Modifier.testTag("save_world_rule_button")
-                ) {
-                    Text(Strings.get("save", language), color = LuxuryVoidBackground, fontWeight = FontWeight.Bold)
+                )
+            }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 480.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text(Strings.get("worldrules_name", language) + " *") },
+                    modifier = Modifier.fillMaxWidth().testTag("world_rule_name_input"),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = LuxuryElectricCyan,
+                        focusedTextColor = LuxuryTextPrimary,
+                        unfocusedTextColor = LuxuryTextPrimary,
+                        unfocusedContainerColor = LuxurySurfaceElevated,
+                        focusedContainerColor = LuxurySurfaceElevated
+                    )
+                )
+                OutlinedTextField(
+                    value = category,
+                    onValueChange = { category = it },
+                    label = { Text(Strings.get("worldrules_category", language)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = LuxuryElectricCyan,
+                        focusedTextColor = LuxuryTextPrimary,
+                        unfocusedTextColor = LuxuryTextPrimary,
+                        unfocusedContainerColor = LuxurySurfaceElevated,
+                        focusedContainerColor = LuxurySurfaceElevated
+                    )
+                )
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = { description = it },
+                    label = { Text(if (language == AppLanguage.ARABIC) "الوصف العلمي والقصصي" else "Scientific / Lore Description") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = LuxuryElectricCyan,
+                        focusedTextColor = LuxuryTextPrimary,
+                        unfocusedTextColor = LuxuryTextPrimary,
+                        unfocusedContainerColor = LuxurySurfaceElevated,
+                        focusedContainerColor = LuxurySurfaceElevated
+                    )
+                )
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = localTimeStr,
+                        onValueChange = { localTimeStr = it },
+                        label = { Text(if (language == AppLanguage.ARABIC) "الثواني المحلية" else "Local Seconds") },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = LuxuryElectricCyan,
+                            focusedTextColor = LuxuryTextPrimary,
+                            unfocusedTextColor = LuxuryTextPrimary,
+                            unfocusedContainerColor = LuxurySurfaceElevated,
+                            focusedContainerColor = LuxurySurfaceElevated
+                        )
+                    )
+                    OutlinedTextField(
+                        value = externalTimeStr,
+                        onValueChange = { externalTimeStr = it },
+                        label = { Text(if (language == AppLanguage.ARABIC) "السنوات الخارجية" else "External Years") },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = LuxuryElectricCyan,
+                            focusedTextColor = LuxuryTextPrimary,
+                            unfocusedTextColor = LuxuryTextPrimary,
+                            unfocusedContainerColor = LuxurySurfaceElevated,
+                            focusedContainerColor = LuxurySurfaceElevated
+                        )
+                    )
                 }
-            },
-            dismissButton = {
-                TextButton(onClick = { showEditRuleDialog = false }) {
-                    Text(Strings.get("cancel", language), color = LuxuryTextSecondary)
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = efficiencyStr,
+                        onValueChange = { efficiencyStr = it },
+                        label = { Text(if (language == AppLanguage.ARABIC) "الكفاءة %" else "Efficiency %") },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = LuxuryElectricCyan,
+                            focusedTextColor = LuxuryTextPrimary,
+                            unfocusedTextColor = LuxuryTextPrimary,
+                            unfocusedContainerColor = LuxurySurfaceElevated,
+                            focusedContainerColor = LuxurySurfaceElevated
+                        )
+                    )
+                    OutlinedTextField(
+                        value = energyType,
+                        onValueChange = { energyType = it },
+                        label = { Text(if (language == AppLanguage.ARABIC) "نوع الطاقة" else "Energy Medium") },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = LuxuryElectricCyan,
+                            focusedTextColor = LuxuryTextPrimary,
+                            unfocusedTextColor = LuxuryTextPrimary,
+                            unfocusedContainerColor = LuxurySurfaceElevated,
+                            focusedContainerColor = LuxurySurfaceElevated
+                        )
+                    )
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(LuxurySurfaceElevated, RoundedCornerShape(12.dp))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Checkbox(
+                        checked = enablesTimeTravel,
+                        onCheckedChange = { enablesTimeTravel = it },
+                        colors = CheckboxDefaults.colors(checkedColor = LuxuryElectricCyan)
+                    )
+                    Text(
+                        text = if (language == AppLanguage.ARABIC) "يتيح حلقة / سفر عبر الزمن مغلق" else "Enables Closed-Timelike Loop / Travel",
+                        color = LuxuryTextPrimary,
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
             }
-        )
+        }
     }
 }
 

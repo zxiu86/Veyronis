@@ -29,6 +29,7 @@ import com.example.domain.UpdateCheckStatus
 import com.example.ui.AppLanguage
 import com.example.ui.Strings
 import com.example.ui.VeyronisViewModel
+import com.example.ui.components.LuxuryDialog
 import com.example.ui.components.LuxuryGlassCard
 import com.example.ui.components.LuxuryGradientButton
 import com.example.ui.theme.*
@@ -232,48 +233,39 @@ fun SettingsScreen(
             }
 
             if (showConfirmPurgeDialog) {
-                AlertDialog(
+                LuxuryDialog(
                     onDismissRequest = { showConfirmPurgeDialog = false },
-                    containerColor = LuxurySurface,
-                    title = {
-                        Text(
-                            text = Strings.get("confirm_delete", language),
-                            color = LuxuryTextPrimary,
-                            fontWeight = FontWeight.Bold
-                        )
-                    },
-                    text = {
-                        Text(
-                            text = Strings.get("delete_warning_msg", language),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = LuxuryTextSecondary
-                        )
-                    },
-                    confirmButton = {
-                        Button(
-                            onClick = {
-                                viewModel.purgeSampleData()
-                                showConfirmPurgeDialog = false
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = LuxuryWarning),
-                            modifier = Modifier.testTag("confirm_purge_btn")
-                        ) {
-                            Text(
-                                text = Strings.get("clear_sample_data", language),
-                                color = LuxuryVoidBackground,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    },
-                    dismissButton = {
+                    title = Strings.get("confirm_delete", language),
+                    subtitle = if (language == AppLanguage.ARABIC) "عملية لا يمكن التراجع عنها" else "Irreversible Operation",
+                    icon = Icons.Default.DeleteForever,
+                    iconColor = LuxuryWarning,
+                    actionButtons = {
                         TextButton(onClick = { showConfirmPurgeDialog = false }) {
                             Text(
                                 text = Strings.get("cancel", language),
                                 color = LuxuryTextSecondary
                             )
                         }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        LuxuryGradientButton(
+                            text = Strings.get("clear_sample_data", language),
+                            onClick = {
+                                viewModel.purgeSampleData()
+                                showConfirmPurgeDialog = false
+                            },
+                            brush = LuxuryDestructiveGradient,
+                            textColor = Color.White,
+                            modifier = Modifier.testTag("confirm_purge_btn")
+                        )
                     }
-                )
+                ) {
+                    Text(
+                        text = Strings.get("delete_warning_msg", language),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = LuxuryTextSecondary,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
+                }
             }
         }
 
@@ -697,33 +689,33 @@ fun SettingsScreen(
     // Modal Dialog: Export Output Preview
     if (showExportPreviewDialog && exportResult != null) {
         val res = exportResult!!
-        AlertDialog(
+        LuxuryDialog(
             onDismissRequest = { showExportPreviewDialog = false },
-            containerColor = LuxurySurface,
-            title = {
-                Text("Export Ready: ${res.fileName}", color = LuxuryTextPrimary, fontWeight = FontWeight.Bold)
-            },
-            text = {
-                Column(modifier = Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
-                    Text(
-                        text = "Total Words: ${res.wordCount} • Format: ${res.mimeType}",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = LuxuryAuroraViolet,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = res.content.take(1500) + if (res.content.length > 1500) "\n\n[... Remaining content generated successfully ...]" else "",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = LuxuryTextSecondary
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showExportPreviewDialog = false }) {
-                    Text("Done", color = LuxuryElectricCyan, fontWeight = FontWeight.Bold)
-                }
+            title = "Export Ready: ${res.fileName}",
+            subtitle = "Total Words: ${res.wordCount} • Format: ${res.mimeType}",
+            icon = Icons.Default.CloudDownload,
+            iconColor = LuxuryAuroraViolet,
+            actionButtons = {
+                LuxuryGradientButton(
+                    text = "Done",
+                    onClick = { showExportPreviewDialog = false },
+                    brush = LuxuryPrimaryGradient,
+                    textColor = LuxuryVoidBackground
+                )
             }
-        )
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 420.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Text(
+                    text = res.content.take(1500) + if (res.content.length > 1500) "\n\n[... Remaining content generated successfully ...]" else "",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = LuxuryTextSecondary
+                )
+            }
+        }
     }
 }

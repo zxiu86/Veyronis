@@ -25,6 +25,7 @@ import com.example.data.model.CodexEntry
 import com.example.ui.AppLanguage
 import com.example.ui.Strings
 import com.example.ui.VeyronisViewModel
+import com.example.ui.components.LuxuryDialog
 import com.example.ui.components.LuxuryGlassCard
 import com.example.ui.components.LuxuryGradientButton
 import com.example.ui.theme.*
@@ -190,56 +191,43 @@ fun CodexScreen(
     // Detail Modal Dialog
     if (selectedEntry != null) {
         val entry = selectedEntry!!
-        AlertDialog(
+        LuxuryDialog(
             onDismissRequest = { selectedEntry = null },
-            containerColor = LuxurySurface,
-            title = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Surface(
-                        color = LuxurySubtleGold.copy(alpha = 0.2f),
-                        shape = RoundedCornerShape(6.dp)
-                    ) {
-                        Text(
-                            text = entry.category.uppercase(),
-                            color = LuxurySubtleGold,
-                            style = MaterialTheme.typography.labelSmall,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text(text = entry.title, color = LuxuryTextPrimary, fontWeight = FontWeight.Bold)
+            title = entry.title,
+            subtitle = entry.category.uppercase(),
+            icon = Icons.Default.AutoStories,
+            iconColor = LuxurySubtleGold,
+            actionButtons = {
+                LuxuryGradientButton(
+                    text = Strings.get("close", language),
+                    onClick = { selectedEntry = null },
+                    brush = LuxuryGoldGradient,
+                    textColor = LuxuryVoidBackground
+                )
+            }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 420.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                if (entry.summary.isNotBlank()) {
+                    Text(text = entry.summary, style = MaterialTheme.typography.bodyMedium, color = LuxuryTextSecondary, fontWeight = FontWeight.SemiBold)
+                    HorizontalDivider(color = LuxurySurfaceHighlight)
                 }
-            },
-            text = {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 450.dp)
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    if (entry.summary.isNotBlank()) {
-                        Text(text = entry.summary, style = MaterialTheme.typography.bodyMedium, color = LuxuryTextSecondary, fontWeight = FontWeight.SemiBold)
-                        HorizontalDivider(color = LuxurySurfaceHighlight)
-                    }
-                    if (entry.description.isNotBlank()) {
-                        Text(text = entry.description, style = MaterialTheme.typography.bodySmall, color = LuxuryTextPrimary)
-                    }
-                    if (entry.relatedCharacters.isNotBlank()) {
-                        Text(text = "${if (language == AppLanguage.ARABIC) "الشخصيات المرتبطة:" else "Related Characters:"} ${entry.relatedCharacters}", style = MaterialTheme.typography.bodySmall, color = LuxuryAuroraViolet)
-                    }
-                    if (entry.relatedLocations.isNotBlank()) {
-                        Text(text = "${if (language == AppLanguage.ARABIC) "المواقع المرتبطة:" else "Related Locations:"} ${entry.relatedLocations}", style = MaterialTheme.typography.bodySmall, color = LuxuryElectricCyan)
-                    }
+                if (entry.description.isNotBlank()) {
+                    Text(text = entry.description, style = MaterialTheme.typography.bodySmall, color = LuxuryTextPrimary)
                 }
-            },
-            confirmButton = {
-                TextButton(onClick = { selectedEntry = null }) {
-                    Text(Strings.get("close", language), color = LuxurySubtleGold, fontWeight = FontWeight.Bold)
+                if (entry.relatedCharacters.isNotBlank()) {
+                    Text(text = "${if (language == AppLanguage.ARABIC) "الشخصيات المرتبطة:" else "Related Characters:"} ${entry.relatedCharacters}", style = MaterialTheme.typography.bodySmall, color = LuxuryAuroraViolet)
+                }
+                if (entry.relatedLocations.isNotBlank()) {
+                    Text(text = "${if (language == AppLanguage.ARABIC) "المواقع المرتبطة:" else "Related Locations:"} ${entry.relatedLocations}", style = MaterialTheme.typography.bodySmall, color = LuxuryElectricCyan)
                 }
             }
-        )
+        }
     }
 
     // Edit/Create Dialog
@@ -252,101 +240,19 @@ fun CodexScreen(
         var relatedCharacters by remember { mutableStateOf(editing.relatedCharacters) }
         var relatedLocations by remember { mutableStateOf(editing.relatedLocations) }
 
-        AlertDialog(
+        LuxuryDialog(
             onDismissRequest = { showEditDialog = false },
-            containerColor = LuxurySurface,
-            title = { Text(if (editing.id == 0L) Strings.get("codex_add", language) else Strings.get("codex_edit", language), color = LuxuryTextPrimary, fontWeight = FontWeight.Bold) },
-            text = {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 480.dp)
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedTextField(
-                        value = title,
-                        onValueChange = { title = it },
-                        label = { Text(Strings.get("codex_name", language) + " *") },
-                        modifier = Modifier.fillMaxWidth().testTag("codex_dialog_title_input"),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = LuxurySubtleGold,
-                            focusedTextColor = LuxuryTextPrimary,
-                            unfocusedTextColor = LuxuryTextPrimary,
-                            unfocusedContainerColor = LuxurySurfaceElevated,
-                            focusedContainerColor = LuxurySurfaceElevated
-                        )
-                    )
-                    OutlinedTextField(
-                        value = category,
-                        onValueChange = { category = it },
-                        label = { Text(Strings.get("codex_category", language)) },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = LuxurySubtleGold,
-                            focusedTextColor = LuxuryTextPrimary,
-                            unfocusedTextColor = LuxuryTextPrimary,
-                            unfocusedContainerColor = LuxurySurfaceElevated,
-                            focusedContainerColor = LuxurySurfaceElevated
-                        )
-                    )
-                    OutlinedTextField(
-                        value = summary,
-                        onValueChange = { summary = it },
-                        label = { Text(Strings.get("codex_summary", language)) },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = LuxurySubtleGold,
-                            focusedTextColor = LuxuryTextPrimary,
-                            unfocusedTextColor = LuxuryTextPrimary,
-                            unfocusedContainerColor = LuxurySurfaceElevated,
-                            focusedContainerColor = LuxurySurfaceElevated
-                        )
-                    )
-                    OutlinedTextField(
-                        value = description,
-                        onValueChange = { description = it },
-                        label = { Text(Strings.get("codex_desc", language)) },
-                        minLines = 3,
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = LuxurySubtleGold,
-                            focusedTextColor = LuxuryTextPrimary,
-                            unfocusedTextColor = LuxuryTextPrimary,
-                            unfocusedContainerColor = LuxurySurfaceElevated,
-                            focusedContainerColor = LuxurySurfaceElevated
-                        )
-                    )
-                    OutlinedTextField(
-                        value = relatedCharacters,
-                        onValueChange = { relatedCharacters = it },
-                        label = { Text(if (language == AppLanguage.ARABIC) "الشخصيات المرتبطة (مفصولة بفواصل)" else "Related Characters (comma-separated)") },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = LuxurySubtleGold,
-                            focusedTextColor = LuxuryTextPrimary,
-                            unfocusedTextColor = LuxuryTextPrimary,
-                            unfocusedContainerColor = LuxurySurfaceElevated,
-                            focusedContainerColor = LuxurySurfaceElevated
-                        )
-                    )
-                    OutlinedTextField(
-                        value = relatedLocations,
-                        onValueChange = { relatedLocations = it },
-                        label = { Text(if (language == AppLanguage.ARABIC) "المواقع المرتبطة" else "Related Locations") },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = LuxurySubtleGold,
-                            focusedTextColor = LuxuryTextPrimary,
-                            unfocusedTextColor = LuxuryTextPrimary,
-                            unfocusedContainerColor = LuxurySurfaceElevated,
-                            focusedContainerColor = LuxurySurfaceElevated
-                        )
-                    )
+            title = if (editing.id == 0L) Strings.get("codex_add", language) else Strings.get("codex_edit", language),
+            subtitle = if (editing.id == 0L) (if (language == AppLanguage.ARABIC) "إضافة مقال موسوعي جديد" else "Create new lore entry") else editing.title,
+            icon = if (editing.id == 0L) Icons.Default.Add else Icons.Default.Edit,
+            iconColor = LuxurySubtleGold,
+            actionButtons = {
+                TextButton(onClick = { showEditDialog = false }) {
+                    Text(Strings.get("cancel", language), color = LuxuryTextSecondary)
                 }
-            },
-            confirmButton = {
-                Button(
+                Spacer(modifier = Modifier.width(8.dp))
+                LuxuryGradientButton(
+                    text = Strings.get("save", language),
                     onClick = {
                         if (title.isNotBlank()) {
                             val updated = editing.copy(
@@ -362,19 +268,106 @@ fun CodexScreen(
                             showEditDialog = false
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = LuxurySubtleGold),
-                    shape = RoundedCornerShape(10.dp),
+                    brush = LuxuryGoldGradient,
+                    textColor = LuxuryVoidBackground,
                     modifier = Modifier.testTag("save_codex_button")
-                ) {
-                    Text(Strings.get("save", language), color = LuxuryVoidBackground, fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showEditDialog = false }) {
-                    Text(Strings.get("cancel", language), color = LuxuryTextSecondary)
-                }
+                )
             }
-        )
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 440.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text(Strings.get("codex_name", language) + " *") },
+                    modifier = Modifier.fillMaxWidth().testTag("codex_dialog_title_input"),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = LuxurySubtleGold,
+                        focusedTextColor = LuxuryTextPrimary,
+                        unfocusedTextColor = LuxuryTextPrimary,
+                        unfocusedContainerColor = LuxurySurfaceElevated,
+                        focusedContainerColor = LuxurySurfaceElevated
+                    )
+                )
+                OutlinedTextField(
+                    value = category,
+                    onValueChange = { category = it },
+                    label = { Text(Strings.get("codex_category", language)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = LuxurySubtleGold,
+                        focusedTextColor = LuxuryTextPrimary,
+                        unfocusedTextColor = LuxuryTextPrimary,
+                        unfocusedContainerColor = LuxurySurfaceElevated,
+                        focusedContainerColor = LuxurySurfaceElevated
+                    )
+                )
+                OutlinedTextField(
+                    value = summary,
+                    onValueChange = { summary = it },
+                    label = { Text(Strings.get("codex_summary", language)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = LuxurySubtleGold,
+                        focusedTextColor = LuxuryTextPrimary,
+                        unfocusedTextColor = LuxuryTextPrimary,
+                        unfocusedContainerColor = LuxurySurfaceElevated,
+                        focusedContainerColor = LuxurySurfaceElevated
+                    )
+                )
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = { description = it },
+                    label = { Text(Strings.get("codex_desc", language)) },
+                    minLines = 3,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = LuxurySubtleGold,
+                        focusedTextColor = LuxuryTextPrimary,
+                        unfocusedTextColor = LuxuryTextPrimary,
+                        unfocusedContainerColor = LuxurySurfaceElevated,
+                        focusedContainerColor = LuxurySurfaceElevated
+                    )
+                )
+                OutlinedTextField(
+                    value = relatedCharacters,
+                    onValueChange = { relatedCharacters = it },
+                    label = { Text(if (language == AppLanguage.ARABIC) "الشخصيات المرتبطة (مفصولة بفواصل)" else "Related Characters (comma-separated)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = LuxurySubtleGold,
+                        focusedTextColor = LuxuryTextPrimary,
+                        unfocusedTextColor = LuxuryTextPrimary,
+                        unfocusedContainerColor = LuxurySurfaceElevated,
+                        focusedContainerColor = LuxurySurfaceElevated
+                    )
+                )
+                OutlinedTextField(
+                    value = relatedLocations,
+                    onValueChange = { relatedLocations = it },
+                    label = { Text(if (language == AppLanguage.ARABIC) "المواقع المرتبطة" else "Related Locations") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = LuxurySubtleGold,
+                        focusedTextColor = LuxuryTextPrimary,
+                        unfocusedTextColor = LuxuryTextPrimary,
+                        unfocusedContainerColor = LuxurySurfaceElevated,
+                        focusedContainerColor = LuxurySurfaceElevated
+                    )
+                )
+            }
+        }
     }
 }
 

@@ -26,7 +26,9 @@ class TemporalConsistencyEngine {
         scenes: List<Scene>,
         timelines: List<Timeline>,
         rules: List<WorldRule>,
-        edges: List<CausalEdge>
+        edges: List<CausalEdge>,
+        decisions: List<StoryDecision> = emptyList(),
+        relationships: List<UniversalRelationship> = emptyList()
     ): List<TemporalWarning> {
         val warnings = mutableListOf<TemporalWarning>()
 
@@ -113,18 +115,22 @@ class TemporalConsistencyEngine {
             }
         }
 
-        // 4. World Rule Physics Inconsistency (Temporal Distortion check)
-        for (rule in rules) {
-            if (rule.affectsConsistency && rule.localTimeEquivalentSeconds > 0 && rule.externalTimeEquivalentYears > 0) {
-                // Ratio check
-                val expectedRatio = rule.externalTimeEquivalentYears / rule.localTimeEquivalentSeconds
-                for (event in events) {
-                    if (event.localTimestamp > 0 && event.cosmicTimestamp > 0) {
-                        // Check if dilation deviates drastically without notation
-                        if (event.durationYears > 0 && event.durationYears < 0.0001 && rule.externalTimeEquivalentYears > 5.0) {
-                            // Advisory notice
-                        }
-                    }
+        // 4. Decision vs Event Chronology
+        for (decision in decisions) {
+            if (decision.eventId != null && decision.cosmicTimestamp != null) {
+                val evt = eventsById[decision.eventId]
+                if (evt != null && decision.cosmicTimestamp > evt.cosmicTimestamp + evt.durationYears) {
+                    warnings.add(
+                        TemporalWarning(
+                            id = "decision-post-event-${decision.id}",
+                            title = "Pivotal Decision Anachronism",
+                            severity = WarningSeverity.WARNING,
+                            affectedEntityName = decision.title,
+                            description = "Decision '${decision.title}' is stamped at Cosmic ${decision.cosmicTimestamp}, which occurs after its associated Event '${evt.title}' (Cosmic ${evt.cosmicTimestamp}).",
+                            recommendation = "Align decision cosmic timestamp prior to or within the event duration.",
+                            cosmicTimestamp = decision.cosmicTimestamp
+                        )
+                    )
                 }
             }
         }

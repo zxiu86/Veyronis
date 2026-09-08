@@ -1,6 +1,8 @@
 package com.example.ui.components
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -12,6 +14,8 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -130,8 +134,8 @@ fun LuxuryGradientButton(
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.96f else 1f,
-        animationSpec = tween(120),
+        targetValue = if (isPressed) 0.95f else 1f,
+        animationSpec = spring(dampingRatio = 0.65f, stiffness = 1200f),
         label = "button_scale"
     )
 
@@ -144,7 +148,7 @@ fun LuxuryGradientButton(
             .clip(shape)
             .clickable(
                 interactionSource = interactionSource,
-                indication = null,
+                indication = ripple(),
                 enabled = enabled,
                 onClick = onClick
             )
@@ -202,8 +206,8 @@ fun LuxurySecondaryButton(
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.96f else 1f,
-        animationSpec = tween(120),
+        targetValue = if (isPressed) 0.95f else 1f,
+        animationSpec = spring(dampingRatio = 0.65f, stiffness = 1200f),
         label = "btn_secondary_scale"
     )
 
@@ -216,7 +220,7 @@ fun LuxurySecondaryButton(
             .clip(shape)
             .clickable(
                 interactionSource = interactionSource,
-                indication = null,
+                indication = ripple(),
                 enabled = enabled,
                 onClick = onClick
             )
@@ -290,6 +294,172 @@ fun LuxuryIconButton(
                 tint = tint,
                 modifier = Modifier.size(size * 0.5f)
             )
+        }
+    }
+}
+
+/**
+ * Ultra-Luxury Glassmorphic Popup / Dialog Container
+ * Features multi-layer ambient aurora backdrops, luminous borders, animated entrance, and refined styling.
+ */
+@Composable
+fun LuxuryDialog(
+    onDismissRequest: () -> Unit,
+    title: String,
+    subtitle: String? = null,
+    icon: ImageVector? = null,
+    iconColor: Color = LuxuryPrimary,
+    glowBrush: Brush = LuxuryPrimaryGradient,
+    actionButtons: @Composable RowScope.() -> Unit = {},
+    content: @Composable ColumnScope.() -> Unit
+) {
+    androidx.compose.ui.window.Dialog(
+        onDismissRequest = onDismissRequest,
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        var isVisible by remember { mutableStateOf(false) }
+        LaunchedEffect(Unit) { isVisible = true }
+
+        val scale by animateFloatAsState(
+            targetValue = if (isVisible) 1f else 0.92f,
+            animationSpec = androidx.compose.animation.core.spring(
+                dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+                stiffness = androidx.compose.animation.core.Spring.StiffnessLow
+            ),
+            label = "dialog_scale"
+        )
+        val alpha by animateFloatAsState(
+            targetValue = if (isVisible) 1f else 0f,
+            animationSpec = tween(180),
+            label = "dialog_alpha"
+        )
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 20.dp, vertical = 28.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Surface(
+                shape = RoundedCornerShape(26.dp),
+                color = LuxuryVoidBackground.copy(alpha = 0.96f),
+                shadowElevation = 24.dp,
+                border = BorderStroke(
+                    1.2.dp,
+                    Brush.linearGradient(
+                        listOf(iconColor.copy(alpha = 0.5f), LuxurySurfaceHighlight, iconColor.copy(alpha = 0.2f))
+                    )
+                ),
+                modifier = Modifier
+                    .widthIn(max = 520.dp)
+                    .fillMaxWidth()
+                    .scale(scale)
+                    .drawBehind {
+                        // Subtle ambient top-right glow
+                        drawCircle(
+                            brush = Brush.radialGradient(
+                                colors = listOf(iconColor.copy(alpha = 0.18f), Color.Transparent),
+                                center = Offset(size.width * 0.85f, 0f),
+                                radius = size.width * 0.7f
+                            ),
+                            center = Offset(size.width * 0.85f, 0f),
+                            radius = size.width * 0.7f
+                        )
+                    }
+            ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    // Header with Icon Halo & Title
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(iconColor.copy(alpha = 0.12f), Color.Transparent)
+                                )
+                            )
+                            .padding(horizontal = 22.dp, vertical = 20.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (icon != null) {
+                            Surface(
+                                shape = RoundedCornerShape(14.dp),
+                                color = iconColor.copy(alpha = 0.16f),
+                                border = BorderStroke(1.dp, iconColor.copy(alpha = 0.4f)),
+                                modifier = Modifier.size(46.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = icon,
+                                        contentDescription = null,
+                                        tint = iconColor,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(14.dp))
+                        }
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = title,
+                                style = MaterialTheme.typography.titleLarge.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = LuxuryTextPrimary,
+                                    fontSize = 18.sp
+                                )
+                            )
+                            if (subtitle != null) {
+                                Spacer(modifier = Modifier.height(3.dp))
+                                Text(
+                                    text = subtitle,
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        color = LuxuryTextSecondary,
+                                        fontSize = 12.sp
+                                    )
+                                )
+                            }
+                        }
+
+                        IconButton(
+                            onClick = onDismissRequest,
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(LuxurySurfaceElevated)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Close",
+                                tint = LuxuryTextSecondary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+
+                    HorizontalDivider(color = LuxurySurfaceHighlight.copy(alpha = 0.5f), thickness = 1.dp)
+
+                    // Dialog Content
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 22.dp, vertical = 18.dp)
+                    ) {
+                        content()
+                    }
+
+                    // Bottom Action Bar
+                    HorizontalDivider(color = LuxurySurfaceHighlight.copy(alpha = 0.3f), thickness = 1.dp)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(LuxurySurface.copy(alpha = 0.6f))
+                            .padding(horizontal = 20.dp, vertical = 14.dp),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically,
+                        content = actionButtons
+                    )
+                }
+            }
         }
     }
 }

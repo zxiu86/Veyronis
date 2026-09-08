@@ -261,3 +261,85 @@ interface SyncLogDao {
     @Query("DELETE FROM sync_log WHERE isSynced = 1")
     suspend fun clearSyncedLogs()
 }
+
+@Dao
+interface UniversalRelationshipDao {
+    @Query("SELECT * FROM universal_relationships ORDER BY id DESC")
+    fun getAllRelationships(): Flow<List<UniversalRelationship>>
+
+    @Query("SELECT * FROM universal_relationships WHERE status = :status ORDER BY id DESC")
+    fun getRelationshipsByStatus(status: String): Flow<List<UniversalRelationship>>
+
+    @Query("SELECT * FROM universal_relationships WHERE (sourceType = :entityType AND sourceId = :entityId) OR (targetType = :entityType AND targetId = :entityId)")
+    fun getRelationshipsForEntity(entityType: String, entityId: Long): Flow<List<UniversalRelationship>>
+
+    @Query("SELECT * FROM universal_relationships WHERE (sourceType = :entityType AND sourceId = :entityId) OR (targetType = :entityType AND targetId = :entityId)")
+    suspend fun getRelationshipsForEntitySync(entityType: String, entityId: Long): List<UniversalRelationship>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertRelationship(rel: UniversalRelationship): Long
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertRelationships(rels: List<UniversalRelationship>): List<Long>
+
+    @Update
+    suspend fun updateRelationship(rel: UniversalRelationship)
+
+    @Delete
+    suspend fun deleteRelationship(rel: UniversalRelationship)
+
+    @Query("DELETE FROM universal_relationships WHERE id = :id")
+    suspend fun deleteRelationshipById(id: Long)
+
+    @Query("UPDATE universal_relationships SET status = 'Confirmed' WHERE id = :id")
+    suspend fun confirmRelationship(id: Long)
+
+    @Query("UPDATE universal_relationships SET status = 'Dismissed' WHERE id = :id")
+    suspend fun dismissRelationship(id: Long)
+
+    @Query("DELETE FROM universal_relationships WHERE (sourceType = :entityType AND sourceId = :entityId) OR (targetType = :entityType AND targetId = :entityId)")
+    suspend fun deleteAllForEntity(entityType: String, entityId: Long)
+}
+
+@Dao
+interface StoryLocationDao {
+    @Query("SELECT * FROM locations ORDER BY name ASC")
+    fun getAllLocations(): Flow<List<StoryLocation>>
+
+    @Query("SELECT * FROM locations WHERE id = :id")
+    suspend fun getLocationById(id: Long): StoryLocation?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertLocation(location: StoryLocation): Long
+
+    @Update
+    suspend fun updateLocation(location: StoryLocation)
+
+    @Delete
+    suspend fun deleteLocation(location: StoryLocation)
+}
+
+@Dao
+interface StoryDecisionDao {
+    @Query("SELECT * FROM story_decisions ORDER BY id DESC")
+    fun getAllDecisions(): Flow<List<StoryDecision>>
+
+    @Query("SELECT * FROM story_decisions WHERE characterId = :characterId ORDER BY id DESC")
+    fun getDecisionsForCharacter(characterId: Long): Flow<List<StoryDecision>>
+
+    @Query("SELECT * FROM story_decisions WHERE sceneId = :sceneId ORDER BY id DESC")
+    fun getDecisionsForScene(sceneId: Long): Flow<List<StoryDecision>>
+
+    @Query("SELECT * FROM story_decisions WHERE id = :id")
+    suspend fun getDecisionById(id: Long): StoryDecision?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertDecision(decision: StoryDecision): Long
+
+    @Update
+    suspend fun updateDecision(decision: StoryDecision)
+
+    @Delete
+    suspend fun deleteDecision(decision: StoryDecision)
+}
+

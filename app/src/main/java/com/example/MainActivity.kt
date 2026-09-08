@@ -5,8 +5,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -409,12 +409,22 @@ fun VeyronisApp(viewModel: VeyronisViewModel) {
                     }
                 }
             ) { innerPadding ->
-                Box(
+                AnimatedContent(
+                    targetState = currentSection,
+                    transitionSpec = {
+                        (fadeIn(animationSpec = tween(140, easing = androidx.compose.animation.core.FastOutSlowInEasing)) +
+                         scaleIn(initialScale = 0.99f, animationSpec = tween(140, easing = androidx.compose.animation.core.FastOutSlowInEasing)))
+                            .togetherWith(
+                                fadeOut(animationSpec = tween(90, easing = androidx.compose.animation.core.FastOutSlowInEasing)) +
+                                scaleOut(targetScale = 1.005f, animationSpec = tween(90, easing = androidx.compose.animation.core.FastOutSlowInEasing))
+                            )
+                    },
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(innerPadding)
-                ) {
-                    when (currentSection) {
+                        .padding(innerPadding),
+                    label = "screen_transition"
+                ) { targetSection ->
+                    when (targetSection) {
                         AppSection.DASHBOARD -> DashboardScreen(viewModel = viewModel)
                         AppSection.WRITER -> WriterScreen(viewModel = viewModel)
                         AppSection.CHARACTERS -> CharactersScreen(viewModel = viewModel)

@@ -25,9 +25,12 @@ import kotlinx.coroutines.launch
         WorldRule::class,
         StoryEvent::class,
         CausalEdge::class,
-        SyncLog::class
+        SyncLog::class,
+        UniversalRelationship::class,
+        StoryLocation::class,
+        StoryDecision::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -45,6 +48,9 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun storyEventDao(): StoryEventDao
     abstract fun causalEdgeDao(): CausalEdgeDao
     abstract fun syncLogDao(): SyncLogDao
+    abstract fun universalRelationshipDao(): UniversalRelationshipDao
+    abstract fun storyLocationDao(): StoryLocationDao
+    abstract fun storyDecisionDao(): StoryDecisionDao
 
     companion object {
         @Volatile
@@ -57,6 +63,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "veyronis_universe.db"
                 )
+                .fallbackToDestructiveMigration()
                 .addCallback(DatabaseCallback(scope))
                 .build()
                 INSTANCE = instance
