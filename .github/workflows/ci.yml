@@ -87,6 +87,18 @@ jobs:
             # Use fallback base64 to ensure signingConfig never misses storeFile in CI
             base64 -d debug.keystore.base64 > release.keystore
             echo "Used base64 fallback to provision release.keystore for verification."
+          else
+            # Generate a valid keystore for CI builds to ensure validateSigningDebug passes
+            keytool -genkeypair -v \
+              -keystore release.keystore \
+              -alias androiddebugkey \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -storepass android \
+              -keypass android \
+              -dname "CN=Debug, OU=CI, O=Veyronis, L=CI, S=CI, C=US"
+            echo "Generated valid keystore for CI verification."
           fi
 
       - name: Cache Android Dependencies & Build Artifacts
