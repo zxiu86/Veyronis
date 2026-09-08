@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -15,12 +16,17 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.model.CodexEntry
+import com.example.ui.AppLanguage
+import com.example.ui.Strings
 import com.example.ui.VeyronisViewModel
+import com.example.ui.components.LuxuryGlassCard
+import com.example.ui.components.LuxuryGradientButton
 import com.example.ui.theme.*
 
 val CODEX_CATEGORIES = listOf(
@@ -36,6 +42,8 @@ fun CodexScreen(
     modifier: Modifier = Modifier
 ) {
     val allCodex by viewModel.allCodexEntries.collectAsStateWithLifecycle()
+    val language by viewModel.appLanguage.collectAsStateWithLifecycle()
+
     var selectedCategory by remember { mutableStateOf("All") }
     var searchQuery by remember { mutableStateOf("") }
     var selectedEntry by remember { mutableStateOf<CodexEntry?>(null) }
@@ -55,7 +63,7 @@ fun CodexScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        containerColor = VeyronisBackground,
+        containerColor = Color.Transparent,
         floatingActionButton = {
             FloatingActionButton(
                 onClick = {
@@ -65,11 +73,12 @@ fun CodexScreen(
                     )
                     showEditDialog = true
                 },
-                containerColor = VeyronisTertiary,
-                contentColor = VeyronisBackground,
+                containerColor = LuxurySubtleGold,
+                contentColor = LuxuryVoidBackground,
+                shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.testTag("add_codex_fab")
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Codex Entry")
+                Icon(Icons.Default.Add, contentDescription = Strings.get("codex_add", language))
             }
         }
     ) { innerPadding ->
@@ -86,34 +95,40 @@ fun CodexScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Codex & Universe Lore",
+                    text = Strings.get("codex_title", language),
                     style = MaterialTheme.typography.headlineSmall,
-                    color = VeyronisTextPrimary,
+                    color = LuxuryTextPrimary,
                     fontWeight = FontWeight.Bold
                 )
-                Text(
-                    text = "${allCodex.size} Entries",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = VeyronisTextMuted
-                )
+                Surface(
+                    color = LuxurySurfaceElevated,
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(
+                        text = "${allCodex.size} ${Strings.get("codex_entries_count", language)}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = LuxuryTextSecondary,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             // Search Bar
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                placeholder = { Text("Search lore, locations, physics, technology...", color = VeyronisTextMuted) },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = VeyronisTextSecondary) },
+                placeholder = { Text(Strings.get("codex_search_hint", language), color = LuxuryTextMuted) },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = LuxuryTextSecondary) },
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = VeyronisTertiary,
-                    focusedTextColor = VeyronisTextPrimary,
-                    unfocusedTextColor = VeyronisTextPrimary,
-                    unfocusedContainerColor = VeyronisPanel,
-                    focusedContainerColor = VeyronisPanel
+                    focusedBorderColor = LuxurySubtleGold,
+                    focusedTextColor = LuxuryTextPrimary,
+                    unfocusedTextColor = LuxuryTextPrimary,
+                    unfocusedContainerColor = LuxurySurface,
+                    focusedContainerColor = LuxurySurface
                 ),
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(14.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("codex_search_input")
@@ -121,7 +136,7 @@ fun CodexScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Category Chips Row
+            // Category Chips Horizontal Scroll
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -129,31 +144,37 @@ fun CodexScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 for (cat in CODEX_CATEGORIES) {
-                    val isSelected = cat == selectedCategory
-                    FilterChip(
-                        selected = isSelected,
-                        onClick = { selectedCategory = cat },
-                        label = { Text(cat) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = VeyronisTertiary,
-                            selectedLabelColor = VeyronisBackground,
-                            containerColor = VeyronisPanel,
-                            labelColor = VeyronisTextSecondary
+                    val isSelected = cat.equals(selectedCategory, ignoreCase = true)
+                    Surface(
+                        color = if (isSelected) LuxurySubtleGold else LuxurySurfaceElevated,
+                        shape = RoundedCornerShape(20.dp),
+                        border = androidx.compose.foundation.BorderStroke(
+                            1.dp,
+                            if (isSelected) LuxurySubtleGold else LuxurySurfaceHighlight
+                        ),
+                        modifier = Modifier.clickable { selectedCategory = cat }
+                    ) {
+                        Text(
+                            text = cat,
+                            color = if (isSelected) LuxuryVoidBackground else LuxuryTextSecondary,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
                         )
-                    )
+                    }
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Codex Entries List
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(filteredEntries) { entry ->
-                    CodexEntryCard(
+                    LuxuryCodexEntryCard(
                         entry = entry,
+                        language = language,
                         onClick = { selectedEntry = entry },
                         onEdit = {
                             entryToEdit = entry
@@ -171,23 +192,23 @@ fun CodexScreen(
         val entry = selectedEntry!!
         AlertDialog(
             onDismissRequest = { selectedEntry = null },
-            containerColor = VeyronisPanel,
+            containerColor = LuxurySurface,
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Surface(
-                        color = VeyronisTertiaryContainer,
+                        color = LuxurySubtleGold.copy(alpha = 0.2f),
                         shape = RoundedCornerShape(6.dp)
                     ) {
                         Text(
                             text = entry.category.uppercase(),
-                            color = VeyronisTertiary,
+                            color = LuxurySubtleGold,
                             style = MaterialTheme.typography.labelSmall,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                             fontWeight = FontWeight.Bold
                         )
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = entry.title, color = VeyronisTextPrimary, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(text = entry.title, color = LuxuryTextPrimary, fontWeight = FontWeight.Bold)
                 }
             },
             text = {
@@ -196,47 +217,32 @@ fun CodexScreen(
                         .fillMaxWidth()
                         .heightIn(max = 450.dp)
                         .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     if (entry.summary.isNotBlank()) {
-                        Text(
-                            text = entry.summary,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = VeyronisTextPrimary,
-                            fontWeight = FontWeight.Medium
-                        )
+                        Text(text = entry.summary, style = MaterialTheme.typography.bodyMedium, color = LuxuryTextSecondary, fontWeight = FontWeight.SemiBold)
+                        HorizontalDivider(color = LuxurySurfaceHighlight)
                     }
                     if (entry.description.isNotBlank()) {
-                        HorizontalDivider(color = VeyronisSurfaceHighlight)
-                        Text(
-                            text = entry.description,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = VeyronisTextSecondary
-                        )
+                        Text(text = entry.description, style = MaterialTheme.typography.bodySmall, color = LuxuryTextPrimary)
                     }
                     if (entry.relatedCharacters.isNotBlank()) {
-                        DetailSectionItem("Related Characters", entry.relatedCharacters)
+                        Text(text = "${if (language == AppLanguage.ARABIC) "الشخصيات المرتبطة:" else "Related Characters:"} ${entry.relatedCharacters}", style = MaterialTheme.typography.bodySmall, color = LuxuryAuroraViolet)
                     }
                     if (entry.relatedLocations.isNotBlank()) {
-                        DetailSectionItem("Related Locations", entry.relatedLocations)
-                    }
-                    if (entry.relatedEvents.isNotBlank()) {
-                        DetailSectionItem("Related Events", entry.relatedEvents)
-                    }
-                    if (entry.relatedLore.isNotBlank()) {
-                        DetailSectionItem("Related Lore", entry.relatedLore)
+                        Text(text = "${if (language == AppLanguage.ARABIC) "المواقع المرتبطة:" else "Related Locations:"} ${entry.relatedLocations}", style = MaterialTheme.typography.bodySmall, color = LuxuryElectricCyan)
                     }
                 }
             },
             confirmButton = {
                 TextButton(onClick = { selectedEntry = null }) {
-                    Text("Close", color = VeyronisPrimary)
+                    Text(Strings.get("close", language), color = LuxurySubtleGold, fontWeight = FontWeight.Bold)
                 }
             }
         )
     }
 
-    // Create / Edit Codex Entry Dialog
+    // Edit/Create Dialog
     if (showEditDialog && entryToEdit != null) {
         val editing = entryToEdit!!
         var title by remember { mutableStateOf(editing.title) }
@@ -248,8 +254,8 @@ fun CodexScreen(
 
         AlertDialog(
             onDismissRequest = { showEditDialog = false },
-            containerColor = VeyronisPanel,
-            title = { Text(if (editing.id == 0L) "New Codex Entry" else "Edit Codex Entry", color = VeyronisTextPrimary) },
+            containerColor = LuxurySurface,
+            title = { Text(if (editing.id == 0L) Strings.get("codex_add", language) else Strings.get("codex_edit", language), color = LuxuryTextPrimary, fontWeight = FontWeight.Bold) },
             text = {
                 Column(
                     modifier = Modifier
@@ -261,45 +267,81 @@ fun CodexScreen(
                     OutlinedTextField(
                         value = title,
                         onValueChange = { title = it },
-                        label = { Text("Title *") },
-                        modifier = Modifier.fillMaxWidth().testTag("codex_title_input"),
-                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = VeyronisTertiary, focusedTextColor = VeyronisTextPrimary, unfocusedTextColor = VeyronisTextPrimary)
+                        label = { Text(Strings.get("codex_name", language) + " *") },
+                        modifier = Modifier.fillMaxWidth().testTag("codex_dialog_title_input"),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = LuxurySubtleGold,
+                            focusedTextColor = LuxuryTextPrimary,
+                            unfocusedTextColor = LuxuryTextPrimary,
+                            unfocusedContainerColor = LuxurySurfaceElevated,
+                            focusedContainerColor = LuxurySurfaceElevated
+                        )
                     )
                     OutlinedTextField(
                         value = category,
                         onValueChange = { category = it },
-                        label = { Text("Category (e.g. Physics, Locations, Species)") },
+                        label = { Text(Strings.get("codex_category", language)) },
                         modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = VeyronisTertiary, focusedTextColor = VeyronisTextPrimary, unfocusedTextColor = VeyronisTextPrimary)
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = LuxurySubtleGold,
+                            focusedTextColor = LuxuryTextPrimary,
+                            unfocusedTextColor = LuxuryTextPrimary,
+                            unfocusedContainerColor = LuxurySurfaceElevated,
+                            focusedContainerColor = LuxurySurfaceElevated
+                        )
                     )
                     OutlinedTextField(
                         value = summary,
                         onValueChange = { summary = it },
-                        label = { Text("Short Summary") },
+                        label = { Text(Strings.get("codex_summary", language)) },
                         modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = VeyronisTertiary, focusedTextColor = VeyronisTextPrimary, unfocusedTextColor = VeyronisTextPrimary)
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = LuxurySubtleGold,
+                            focusedTextColor = LuxuryTextPrimary,
+                            unfocusedTextColor = LuxuryTextPrimary,
+                            unfocusedContainerColor = LuxurySurfaceElevated,
+                            focusedContainerColor = LuxurySurfaceElevated
+                        )
                     )
                     OutlinedTextField(
                         value = description,
                         onValueChange = { description = it },
-                        label = { Text("Detailed Lore Description") },
+                        label = { Text(Strings.get("codex_desc", language)) },
                         minLines = 3,
                         modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = VeyronisTertiary, focusedTextColor = VeyronisTextPrimary, unfocusedTextColor = VeyronisTextPrimary)
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = LuxurySubtleGold,
+                            focusedTextColor = LuxuryTextPrimary,
+                            unfocusedTextColor = LuxuryTextPrimary,
+                            unfocusedContainerColor = LuxurySurfaceElevated,
+                            focusedContainerColor = LuxurySurfaceElevated
+                        )
                     )
                     OutlinedTextField(
                         value = relatedCharacters,
                         onValueChange = { relatedCharacters = it },
-                        label = { Text("Related Characters (comma-separated)") },
+                        label = { Text(if (language == AppLanguage.ARABIC) "الشخصيات المرتبطة (مفصولة بفواصل)" else "Related Characters (comma-separated)") },
                         modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = VeyronisTertiary, focusedTextColor = VeyronisTextPrimary, unfocusedTextColor = VeyronisTextPrimary)
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = LuxurySubtleGold,
+                            focusedTextColor = LuxuryTextPrimary,
+                            unfocusedTextColor = LuxuryTextPrimary,
+                            unfocusedContainerColor = LuxurySurfaceElevated,
+                            focusedContainerColor = LuxurySurfaceElevated
+                        )
                     )
                     OutlinedTextField(
                         value = relatedLocations,
                         onValueChange = { relatedLocations = it },
-                        label = { Text("Related Locations") },
+                        label = { Text(if (language == AppLanguage.ARABIC) "المواقع المرتبطة" else "Related Locations") },
                         modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = VeyronisTertiary, focusedTextColor = VeyronisTextPrimary, unfocusedTextColor = VeyronisTextPrimary)
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = LuxurySubtleGold,
+                            focusedTextColor = LuxuryTextPrimary,
+                            unfocusedTextColor = LuxuryTextPrimary,
+                            unfocusedContainerColor = LuxurySurfaceElevated,
+                            focusedContainerColor = LuxurySurfaceElevated
+                        )
                     )
                 }
             },
@@ -320,15 +362,16 @@ fun CodexScreen(
                             showEditDialog = false
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = VeyronisTertiary),
+                    colors = ButtonDefaults.buttonColors(containerColor = LuxurySubtleGold),
+                    shape = RoundedCornerShape(10.dp),
                     modifier = Modifier.testTag("save_codex_button")
                 ) {
-                    Text("Save", color = VeyronisBackground)
+                    Text(Strings.get("save", language), color = LuxuryVoidBackground, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showEditDialog = false }) {
-                    Text("Cancel", color = VeyronisTextSecondary)
+                    Text(Strings.get("cancel", language), color = LuxuryTextSecondary)
                 }
             }
         )
@@ -336,15 +379,15 @@ fun CodexScreen(
 }
 
 @Composable
-fun CodexEntryCard(
+fun LuxuryCodexEntryCard(
     entry: CodexEntry,
+    language: AppLanguage,
     onClick: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = VeyronisPanel),
-        shape = RoundedCornerShape(12.dp),
+    LuxuryGlassCard(
+        glowColor = LuxurySubtleGold,
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
@@ -357,34 +400,35 @@ fun CodexEntryCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Surface(
-                    color = VeyronisTertiaryContainer,
-                    shape = RoundedCornerShape(6.dp)
+                    color = LuxurySubtleGold.copy(alpha = 0.2f),
+                    shape = RoundedCornerShape(8.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, LuxurySubtleGold.copy(alpha = 0.4f))
                 ) {
                     Text(
                         text = entry.category.uppercase(),
-                        color = VeyronisTertiary,
+                        color = LuxurySubtleGold,
                         style = MaterialTheme.typography.labelSmall,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                        fontWeight = FontWeight.Bold
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                        fontWeight = FontWeight.ExtraBold
                     )
                 }
 
                 Row {
                     IconButton(onClick = onEdit, modifier = Modifier.size(28.dp)) {
-                        Icon(Icons.Default.Edit, contentDescription = "Edit", tint = VeyronisTextSecondary, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Edit, contentDescription = Strings.get("edit", language), tint = LuxuryTextSecondary, modifier = Modifier.size(16.dp))
                     }
                     IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
-                        Icon(Icons.Default.Delete, contentDescription = "Delete", tint = VeyronisWarning, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Delete, contentDescription = Strings.get("delete", language), tint = LuxuryWarning, modifier = Modifier.size(16.dp))
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             Text(
                 text = entry.title,
                 style = MaterialTheme.typography.titleMedium,
-                color = VeyronisTextPrimary,
+                color = LuxuryTextPrimary,
                 fontWeight = FontWeight.Bold
             )
 
@@ -393,7 +437,7 @@ fun CodexEntryCard(
                 Text(
                     text = entry.summary,
                     style = MaterialTheme.typography.bodySmall,
-                    color = VeyronisTextSecondary,
+                    color = LuxuryTextSecondary,
                     maxLines = 2
                 )
             }

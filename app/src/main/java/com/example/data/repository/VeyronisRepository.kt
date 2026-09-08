@@ -109,4 +109,9 @@ class VeyronisRepository(private val database: AppDatabase) {
         )
     }
     suspend fun markLogsSynced(ids: List<Long>) = database.syncLogDao().markAsSynced(ids)
+
+    // Clear all sample & demo data across the database
+    suspend fun clearAllSampleData() {
+        database.clearAllTables()
+    }
 }

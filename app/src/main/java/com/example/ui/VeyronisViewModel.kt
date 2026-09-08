@@ -15,14 +15,29 @@ import kotlinx.coroutines.launch
 enum class AppSection(val title: String) {
     DASHBOARD("Dashboard"),
     WRITER("Writer"),
+    SETTINGS("Settings"),
     CHARACTERS("Characters"),
     CODEX("Codex"),
     TIMELINE("Timeline"),
     EVENTS("Events"),
     GRAPHS("Graphs"),
     WORLD_RULES("World Rules"),
-    SEARCH("Search"),
-    SETTINGS("Settings & Sync")
+    SEARCH("Search");
+
+    fun getLocalizedTitle(language: AppLanguage): String {
+        return when (this) {
+            DASHBOARD -> Strings.get("nav_dashboard", language)
+            WRITER -> Strings.get("nav_writer", language)
+            SETTINGS -> Strings.get("nav_settings", language)
+            CHARACTERS -> Strings.get("nav_characters", language)
+            CODEX -> Strings.get("nav_codex", language)
+            TIMELINE -> Strings.get("nav_timeline", language)
+            EVENTS -> Strings.get("nav_events", language)
+            GRAPHS -> Strings.get("nav_graphs", language)
+            WORLD_RULES -> Strings.get("nav_rules", language)
+            SEARCH -> Strings.get("nav_search", language)
+        }
+    }
 }
 
 class VeyronisViewModel(application: Application) : AndroidViewModel(application) {
@@ -33,7 +48,19 @@ class VeyronisViewModel(application: Application) : AndroidViewModel(application
     val lexiconEngine = LexiconEngine()
     val exportEngine = ExportEngine()
     val syncEngine = SyncEngine()
-    val updateEngine = UpdateEngine(currentVersion = "1.0.0")
+    val updateEngine = UpdateEngine(currentVersion = "1.0.1")
+
+    // Language State (Defaults to Arabic as requested by user, with instant toggling)
+    private val _appLanguage = MutableStateFlow(AppLanguage.ARABIC)
+    val appLanguage: StateFlow<AppLanguage> = _appLanguage.asStateFlow()
+
+    fun setLanguage(language: AppLanguage) {
+        _appLanguage.value = language
+    }
+
+    fun toggleLanguage() {
+        _appLanguage.value = if (_appLanguage.value == AppLanguage.ARABIC) AppLanguage.ENGLISH else AppLanguage.ARABIC
+    }
 
     // Navigation
     private val _currentSection = MutableStateFlow(AppSection.DASHBOARD)
@@ -312,10 +339,16 @@ class VeyronisViewModel(application: Application) : AndroidViewModel(application
     }
 
     // Hierarchy CRUD
-    fun createSeries(title: String, desc: String = "") {
+    fun createSeries(title: String, desc: String = "", coverUri: String = "") {
         viewModelScope.launch {
-            val id = repository.insertSeries(Series(title = title, description = desc))
+            val id = repository.insertSeries(Series(title = title, description = desc, coverUri = coverUri))
             selectSeries(id)
+        }
+    }
+
+    fun updateSeries(series: Series) {
+        viewModelScope.launch {
+            repository.updateSeries(series)
         }
     }
 
@@ -325,7 +358,7 @@ class VeyronisViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    fun createBook(title: String, subtitle: String = "", desc: String = "") {
+    fun createBook(title: String, subtitle: String = "", desc: String = "", coverUri: String = "", targetWordCount: Int = 80000, status: String = "In Progress") {
         val seriesId = _selectedSeriesId.value ?: return
         viewModelScope.launch {
             val count = allBooks.value.filter { it.seriesId == seriesId }.size
@@ -335,10 +368,59 @@ class VeyronisViewModel(application: Application) : AndroidViewModel(application
                     title = title,
                     subtitle = subtitle,
                     description = desc,
+                    coverUri = coverUri,
+                    targetWordCount = targetWordCount,
+                    status = status,
                     orderIndex = count
                 )
             )
             selectBook(id)
+        }
+    }
+
+    fun updateBook(book: Book) {
+        viewModelScope.launch {
+            repository.updateBook(book)
+        }
+    }
+
+    // Direct standalone novel creation helper
+    fun createStandaloneNovel(title: String, desc: String = "", coverUri: String = "", targetWordCount: Int = 80000) {
+        viewModelScope.launch {
+            // Check if there's a standalone series container or create one with the novel name
+            val seriesId = repository.insertSeries(Series(title = title, description = desc, coverUri = coverUri))
+            selectSeries(seriesId)
+            val bookId = repository.insertBook(
+                Book(
+                    seriesId = seriesId,
+                    title = title,
+                    subtitle = "رواية مفردة / Standalone Novel",
+                    description = desc,
+                    coverUri = coverUri,
+                    targetWordCount = targetWordCount,
+                    status = "In Progress",
+                    orderIndex = 0
+                )
+            )
+            selectBook(bookId)
+            // Create default Chapter 1 and Scene 1 to let them write right away
+            val chapterId = repository.insertChapter(
+                Chapter(
+                    bookId = bookId,
+                    title = "الفصل الأول",
+                    summary = "بداية الرواية",
+                    orderIndex = 0
+                )
+            )
+            selectChapter(chapterId)
+            val scene = Scene(
+                chapterId = chapterId,
+                title = "المشهد 1",
+                content = "",
+                orderIndex = 0
+            )
+            val sceneId = repository.insertScene(scene)
+            selectScene(scene.copy(id = sceneId))
         }
     }
 
@@ -578,5 +660,20 @@ class VeyronisViewModel(application: Application) : AndroidViewModel(application
             scenesByCh[ch.id] = allScenes.value.filter { it.chapterId == ch.id }
         }
         return exportEngine.exportBook(series, book, chapters, scenesByCh, options)
+    }
+
+    // Purge all sample and demo items from the universe
+    fun purgeSampleData(onComplete: () -> Unit = {}) {
+        viewModelScope.launch {
+            repository.clearAllSampleData()
+            _selectedSeriesId.value = null
+            _selectedBookId.value = null
+            _selectedChapterId.value = null
+            _selectedSceneId.value = null
+            _currentEditingScene.value = null
+            _editorTitle.value = ""
+            _editorContent.value = ""
+            onComplete()
+        }
     }
 }

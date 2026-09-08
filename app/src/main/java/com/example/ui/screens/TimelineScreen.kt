@@ -18,7 +18,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.model.Timeline
+import com.example.ui.AppLanguage
 import com.example.ui.AppSection
+import com.example.ui.Strings
 import com.example.ui.VeyronisViewModel
 import com.example.ui.theme.*
 
@@ -31,6 +33,7 @@ fun TimelineScreen(
     val allTimelines by viewModel.allTimelines.collectAsStateWithLifecycle()
     val allEvents by viewModel.allStoryEvents.collectAsStateWithLifecycle()
     val allWorldRules by viewModel.allWorldRules.collectAsStateWithLifecycle()
+    val language by viewModel.appLanguage.collectAsStateWithLifecycle()
 
     var showAddDialog by remember { mutableStateOf(false) }
     var timelineToEdit by remember { mutableStateOf<Timeline?>(null) }
@@ -43,25 +46,25 @@ fun TimelineScreen(
     val activeTimeline = allTimelines.find { it.id == calcSelectedTimelineId } ?: allTimelines.firstOrNull()
     val activeRule = allWorldRules.find { it.name.contains("Temporal Distortion", ignoreCase = true) }
 
-    val calculatedOutput = remember(calcInputTime, activeTimeline, activeRule, calcDirectionToCosmic) {
+    val calculatedOutput = remember(calcInputTime, activeTimeline, activeRule, calcDirectionToCosmic, language) {
         val input = calcInputTime.toDoubleOrNull() ?: 0.0
         if (activeRule != null && activeRule.localTimeEquivalentSeconds > 0) {
             val ratio = (activeRule.externalTimeEquivalentYears * 365.25 * 86400.0) / activeRule.localTimeEquivalentSeconds
             if (calcDirectionToCosmic) {
                 // Input is seconds -> Output is Cosmic Years
                 val cosmicYears = (input * ratio) / (365.25 * 86400.0)
-                "%.3f Cosmic Years".format(cosmicYears)
+                "%.3f %s".format(cosmicYears, if (language == AppLanguage.ARABIC) "سنة كونية" else "Cosmic Years")
             } else {
                 // Input is Cosmic Years -> Output is Local Seconds
                 val localSeconds = (input * (365.25 * 86400.0)) / ratio
-                "%.3f Local Seconds".format(localSeconds)
+                "%.3f %s".format(localSeconds, if (language == AppLanguage.ARABIC) "ثانية محلية" else "Local Seconds")
             }
         } else {
             val multiplier = activeTimeline?.dilationMultiplier ?: 1.0
             if (calcDirectionToCosmic) {
-                "%.2f Cosmic Time".format(input / multiplier)
+                "%.2f %s".format(input / multiplier, if (language == AppLanguage.ARABIC) "وقت كوني" else "Cosmic Time")
             } else {
-                "%.2f Local Time".format(input * multiplier)
+                "%.2f %s".format(input * multiplier, if (language == AppLanguage.ARABIC) "وقت محلي" else "Local Time")
             }
         }
     }
@@ -79,7 +82,7 @@ fun TimelineScreen(
                 contentColor = VeyronisBackground,
                 modifier = Modifier.testTag("add_timeline_fab")
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Timeline")
+                Icon(Icons.Default.Add, contentDescription = Strings.get("timeline_add", language))
             }
         }
     ) { innerPadding ->
@@ -98,13 +101,13 @@ fun TimelineScreen(
                 ) {
                     Column {
                         Text(
-                            text = "Multi-Timeline Architecture",
+                            text = Strings.get("timeline_title", language),
                             style = MaterialTheme.typography.headlineSmall,
                             color = VeyronisTextPrimary,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "Manage concurrent, dilated & branched causal streams",
+                            text = if (language == AppLanguage.ARABIC) "إدارة المسارات السببية المتزامنة والمتمددة والمتفرعة" else "Manage concurrent, dilated & branched causal streams",
                             style = MaterialTheme.typography.bodySmall,
                             color = VeyronisTextSecondary
                         )
@@ -126,7 +129,7 @@ fun TimelineScreen(
                             Icon(Icons.Default.HourglassTop, contentDescription = null, tint = VeyronisTertiary)
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "TEMPORAL DILATION CALCULATOR",
+                                text = Strings.get("timeline_calculator", language),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = VeyronisTertiary,
                                 fontWeight = FontWeight.Bold
@@ -135,9 +138,9 @@ fun TimelineScreen(
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
                             text = if (activeRule != null)
-                                "Governed by active rule: '${activeRule.name}' (${activeRule.localTimeEquivalentSeconds}s local = ${activeRule.externalTimeEquivalentYears} yrs external)"
+                                "${if (language == AppLanguage.ARABIC) "محكوم بالقاعدة النشطة" else "Governed by active rule"}: '${activeRule.name}' (${activeRule.localTimeEquivalentSeconds}s local = ${activeRule.externalTimeEquivalentYears} yrs external)"
                             else
-                                "Governed by standard dilation multiplier.",
+                                if (language == AppLanguage.ARABIC) "محكوم بمعامل التمدد القياسي." else "Governed by standard dilation multiplier.",
                             style = MaterialTheme.typography.bodySmall,
                             color = VeyronisTextSecondary
                         )
@@ -152,7 +155,7 @@ fun TimelineScreen(
                             OutlinedTextField(
                                 value = calcInputTime,
                                 onValueChange = { calcInputTime = it },
-                                label = { Text(if (calcDirectionToCosmic) "Local Seconds" else "Cosmic Years") },
+                                label = { Text(if (calcDirectionToCosmic) (if (language == AppLanguage.ARABIC) "ثواني محلية" else "Local Seconds") else (if (language == AppLanguage.ARABIC) "سنوات كونية" else "Cosmic Years")) },
                                 modifier = Modifier.weight(1f).testTag("calc_input_field"),
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedBorderColor = VeyronisSecondary,
@@ -175,7 +178,7 @@ fun TimelineScreen(
                             ) {
                                 Column(modifier = Modifier.padding(10.dp)) {
                                     Text(
-                                        text = if (calcDirectionToCosmic) "External Cosmic Time:" else "Internal Local Time:",
+                                        text = if (calcDirectionToCosmic) (if (language == AppLanguage.ARABIC) "الوقت الكوني الخارجي:" else "External Cosmic Time:") else (if (language == AppLanguage.ARABIC) "الوقت المحلي الداخلي:" else "Internal Local Time:"),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = VeyronisTextMuted
                                     )
@@ -196,7 +199,7 @@ fun TimelineScreen(
             // Timelines List
             item {
                 Text(
-                    text = "Active Timelines (${allTimelines.size})",
+                    text = "${Strings.get("timeline_count", language)} (${allTimelines.size})",
                     style = MaterialTheme.typography.titleMedium,
                     color = VeyronisTextPrimary,
                     fontWeight = FontWeight.Bold
@@ -208,6 +211,7 @@ fun TimelineScreen(
                 TimelineCard(
                     timeline = timeline,
                     eventCount = eventsInTimeline.size,
+                    language = language,
                     onEdit = {
                         timelineToEdit = timeline
                         showAddDialog = true
@@ -225,7 +229,7 @@ fun TimelineScreen(
                 ) {
                     Icon(Icons.Default.Rule, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Configure World Rules & Fictional Physics")
+                    Text(Strings.get("worldrules_title", language))
                 }
             }
         }
@@ -244,20 +248,20 @@ fun TimelineScreen(
         AlertDialog(
             onDismissRequest = { showAddDialog = false },
             containerColor = VeyronisPanel,
-            title = { Text(if (editing.id == 0L) "Create Timeline" else "Edit Timeline", color = VeyronisTextPrimary) },
+            title = { Text(if (editing.id == 0L) Strings.get("timeline_add", language) else Strings.get("timeline_edit", language), color = VeyronisTextPrimary) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = name,
                         onValueChange = { name = it },
-                        label = { Text("Timeline Name *") },
+                        label = { Text(Strings.get("timeline_name", language)) },
                         modifier = Modifier.fillMaxWidth().testTag("timeline_name_input"),
                         colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = VeyronisSecondary, focusedTextColor = VeyronisTextPrimary, unfocusedTextColor = VeyronisTextPrimary)
                     )
                     OutlinedTextField(
                         value = description,
                         onValueChange = { description = it },
-                        label = { Text("Description & Notes") },
+                        label = { Text(if (language == AppLanguage.ARABIC) "الوصف والملاحظات" else "Description & Notes") },
                         modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = VeyronisSecondary, focusedTextColor = VeyronisTextPrimary, unfocusedTextColor = VeyronisTextPrimary)
                     )
@@ -267,19 +271,19 @@ fun TimelineScreen(
                             onCheckedChange = { isCosmicPrime = it },
                             colors = CheckboxDefaults.colors(checkedColor = VeyronisSecondary)
                         )
-                        Text("Is Cosmic Prime Coordinate Baseline", color = VeyronisTextPrimary, style = MaterialTheme.typography.bodySmall)
+                        Text(if (language == AppLanguage.ARABIC) "الخط الزمني المرجعي الكوني الأساسي" else "Is Cosmic Prime Coordinate Baseline", color = VeyronisTextPrimary, style = MaterialTheme.typography.bodySmall)
                     }
                     OutlinedTextField(
                         value = offsetStr,
                         onValueChange = { offsetStr = it },
-                        label = { Text("Cosmic Time Offset") },
+                        label = { Text(Strings.get("timeline_offset", language)) },
                         modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = VeyronisSecondary, focusedTextColor = VeyronisTextPrimary, unfocusedTextColor = VeyronisTextPrimary)
                     )
                     OutlinedTextField(
                         value = dilationStr,
                         onValueChange = { dilationStr = it },
-                        label = { Text("Dilation Multiplier (1.0 = normal)") },
+                        label = { Text(Strings.get("timeline_dilation", language)) },
                         modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = VeyronisSecondary, focusedTextColor = VeyronisTextPrimary, unfocusedTextColor = VeyronisTextPrimary)
                     )
@@ -287,7 +291,7 @@ fun TimelineScreen(
                         OutlinedTextField(
                             value = divergenceStr,
                             onValueChange = { divergenceStr = it },
-                            label = { Text("Branch Divergence Point (Cosmic Year)") },
+                            label = { Text(if (language == AppLanguage.ARABIC) "نقطة انشعاب الخط (السنة الكونية)" else "Branch Divergence Point (Cosmic Year)") },
                             modifier = Modifier.fillMaxWidth(),
                             colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = VeyronisSecondary, focusedTextColor = VeyronisTextPrimary, unfocusedTextColor = VeyronisTextPrimary)
                         )
@@ -313,12 +317,12 @@ fun TimelineScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = VeyronisSecondary),
                     modifier = Modifier.testTag("save_timeline_button")
                 ) {
-                    Text("Save", color = VeyronisBackground)
+                    Text(Strings.get("save", language), color = VeyronisBackground)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showAddDialog = false }) {
-                    Text("Cancel", color = VeyronisTextSecondary)
+                    Text(Strings.get("cancel", language), color = VeyronisTextSecondary)
                 }
             }
         )
@@ -329,6 +333,7 @@ fun TimelineScreen(
 fun TimelineCard(
     timeline: Timeline,
     eventCount: Int,
+    language: AppLanguage,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
@@ -371,7 +376,7 @@ fun TimelineCard(
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Text(
-                        text = if (timeline.isCosmicPrime) "COSMIC PRIME" else "BRANCHED",
+                        text = if (timeline.isCosmicPrime) (if (language == AppLanguage.ARABIC) "الرئيسي الكوني" else "COSMIC PRIME") else (if (language == AppLanguage.ARABIC) "متفرع" else "BRANCHED"),
                         color = if (timeline.isCosmicPrime) VeyronisPrimary else VeyronisTextSecondary,
                         style = MaterialTheme.typography.labelSmall,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
@@ -399,18 +404,18 @@ fun TimelineCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Dilation: ${timeline.dilationMultiplier}x • Offset: ${timeline.cosmicTimeOffset} • $eventCount events",
+                    text = "${Strings.get("timeline_dilation", language)}: ${timeline.dilationMultiplier}x • ${Strings.get("timeline_offset", language)}: ${timeline.cosmicTimeOffset} • $eventCount ${Strings.get("events_count", language)}",
                     style = MaterialTheme.typography.labelSmall,
                     color = VeyronisTertiary
                 )
 
                 Row {
                     IconButton(onClick = onEdit, modifier = Modifier.size(28.dp)) {
-                        Icon(Icons.Default.Edit, contentDescription = "Edit", tint = VeyronisTextSecondary, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Edit, contentDescription = Strings.get("edit", language), tint = VeyronisTextSecondary, modifier = Modifier.size(16.dp))
                     }
                     if (!timeline.isCosmicPrime) {
                         IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
-                            Icon(Icons.Default.Delete, contentDescription = "Delete", tint = VeyronisWarning, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.Delete, contentDescription = Strings.get("delete", language), tint = VeyronisWarning, modifier = Modifier.size(16.dp))
                         }
                     }
                 }

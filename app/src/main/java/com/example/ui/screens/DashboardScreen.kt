@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -16,6 +17,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
@@ -24,8 +26,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.domain.WarningSeverity
+import com.example.ui.AppLanguage
 import com.example.ui.AppSection
+import com.example.ui.Strings
 import com.example.ui.VeyronisViewModel
+import com.example.ui.components.LuxuryGlassCard
+import com.example.ui.components.LuxuryGradientButton
 import com.example.ui.theme.*
 
 @Composable
@@ -41,6 +47,7 @@ fun DashboardScreen(
     val allCodex by viewModel.allCodexEntries.collectAsStateWithLifecycle()
     val allEvents by viewModel.allStoryEvents.collectAsStateWithLifecycle()
     val warnings by viewModel.temporalWarnings.collectAsStateWithLifecycle()
+    val language by viewModel.appLanguage.collectAsStateWithLifecycle()
 
     val selectedSeriesId by viewModel.selectedSeriesId.collectAsStateWithLifecycle()
     val selectedBookId by viewModel.selectedBookId.collectAsStateWithLifecycle()
@@ -55,15 +62,14 @@ fun DashboardScreen(
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
-            .background(VeyronisBackground)
+            .background(Color.Transparent)
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            // Header Banner
-            Card(
-                colors = CardDefaults.cardColors(containerColor = VeyronisPanel),
-                shape = RoundedCornerShape(16.dp),
+            // Header Glass Card
+            LuxuryGlassCard(
+                glowColor = LuxuryElectricCyan,
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("dashboard_header_card")
@@ -78,45 +84,58 @@ fun DashboardScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Surface(
+                                color = LuxuryElectricCyan.copy(alpha = 0.15f),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text(
+                                    text = Strings.get("current_manuscript", language).uppercase(),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = LuxuryElectricCyan,
+                                    letterSpacing = 1.5.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "VEYRONIS ARCHIVES",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = VeyronisSecondary,
-                                letterSpacing = 2.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = currentSeries?.title ?: "No Series Selected",
+                                text = currentSeries?.title ?: if (language == AppLanguage.ARABIC) "مشروع جديد نظيف" else "New Clean Project",
                                 style = MaterialTheme.typography.headlineSmall,
-                                color = VeyronisTextPrimary,
+                                color = LuxuryTextPrimary,
                                 fontWeight = FontWeight.Bold
                             )
                             if (currentBook != null) {
                                 Text(
                                     text = currentBook.title + if (currentBook.subtitle.isNotBlank()) " — ${currentBook.subtitle}" else "",
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = VeyronisTextSecondary
+                                    color = LuxuryTextSecondary
+                                )
+                            } else {
+                                Text(
+                                    text = Strings.get("clean_slate", language),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = LuxuryTextMuted
                                 )
                             }
                         }
 
                         Surface(
-                            color = VeyronisPrimaryContainer,
-                            shape = RoundedCornerShape(20.dp)
+                            color = LuxurySurfaceElevated,
+                            shape = RoundedCornerShape(20.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, LuxuryElectricCyan.copy(alpha = 0.4f))
                         ) {
                             Text(
-                                text = currentBook?.status ?: "Active",
-                                color = VeyronisPrimary,
+                                text = currentBook?.status ?: if (language == AppLanguage.ARABIC) "نشط" else "Active",
+                                color = LuxuryElectricCyan,
                                 style = MaterialTheme.typography.labelMedium,
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                                fontWeight = FontWeight.SemiBold
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                                fontWeight = FontWeight.Bold
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(18.dp))
 
                     // Progress Bar
                     Row(
@@ -124,27 +143,33 @@ fun DashboardScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = "Manuscript Progress: ${(progress * 100).toInt()}%",
+                            text = "${Strings.get("overall_progress", language)}: ${(progress * 100).toInt()}%",
                             style = MaterialTheme.typography.bodySmall,
-                            color = VeyronisTextSecondary
+                            color = LuxuryTextSecondary
                         )
                         Text(
-                            text = "$totalWords / $targetWords words",
+                            text = "$totalWords / $targetWords ${Strings.get("words_count", language)}",
                             style = MaterialTheme.typography.bodySmall,
-                            color = VeyronisTertiary,
-                            fontWeight = FontWeight.Medium
+                            color = LuxuryAuroraViolet,
+                            fontWeight = FontWeight.Bold
                         )
                     }
                     Spacer(modifier = Modifier.height(8.dp))
-                    LinearProgressIndicator(
-                        progress = { progress },
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(8.dp)
-                            .clip(CircleShape),
-                        color = VeyronisSecondary,
-                        trackColor = VeyronisPanelVariant,
-                    )
+                            .clip(CircleShape)
+                            .background(LuxurySurfaceHighlight)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .fillMaxWidth(progress)
+                                .clip(CircleShape)
+                                .background(LuxuryPrimaryGradient)
+                        )
+                    }
                 }
             }
         }
@@ -152,57 +177,55 @@ fun DashboardScreen(
         item {
             // Quick metrics grid
             Text(
-                text = "Universe Metrics",
+                text = if (language == AppLanguage.ARABIC) "إحصائيات المحتوى والأكوان" else "Universe Metrics",
                 style = MaterialTheme.typography.titleMedium,
-                color = VeyronisTextPrimary,
+                color = LuxuryTextPrimary,
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                MetricCard(
+                LuxuryMetricCard(
                     modifier = Modifier.weight(1f),
-                    title = "Chapters",
+                    title = Strings.get("chapters", language),
                     value = allChapters.size.toString(),
                     icon = Icons.AutoMirrored.Filled.MenuBook,
-                    color = VeyronisPrimary
+                    glowColor = LuxuryElectricCyan
                 ) { viewModel.navigateTo(AppSection.WRITER) }
 
-                MetricCard(
+                LuxuryMetricCard(
                     modifier = Modifier.weight(1f),
-                    title = "Characters",
+                    title = Strings.get("scenes", language),
+                    value = allScenes.size.toString(),
+                    icon = Icons.Default.EditNote,
+                    glowColor = LuxuryAuroraViolet
+                ) { viewModel.navigateTo(AppSection.WRITER) }
+
+                LuxuryMetricCard(
+                    modifier = Modifier.weight(1f),
+                    title = Strings.get("characters_count", language),
                     value = allCharacters.size.toString(),
                     icon = Icons.Default.People,
-                    color = VeyronisSecondary
+                    glowColor = LuxuryCyberIndigo
                 ) { viewModel.navigateTo(AppSection.CHARACTERS) }
 
-                MetricCard(
+                LuxuryMetricCard(
                     modifier = Modifier.weight(1f),
-                    title = "Codex Lore",
+                    title = Strings.get("codex_count", language),
                     value = allCodex.size.toString(),
                     icon = Icons.Default.AutoStories,
-                    color = VeyronisTertiary
+                    glowColor = LuxurySubtleGold
                 ) { viewModel.navigateTo(AppSection.CODEX) }
-
-                MetricCard(
-                    modifier = Modifier.weight(1f),
-                    title = "Events",
-                    value = allEvents.size.toString(),
-                    icon = Icons.Default.Timeline,
-                    color = Color(0xFFE879F9)
-                ) { viewModel.navigateTo(AppSection.EVENTS) }
             }
         }
 
         // Temporal Consistency Warning Alert Card
         item {
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = if (warnings.isNotEmpty()) VeyronisWarningContainer else VeyronisPanel
-                ),
-                shape = RoundedCornerShape(12.dp),
+            val isWarning = warnings.isNotEmpty()
+            LuxuryGlassCard(
+                glowColor = if (isWarning) LuxuryWarning else LuxurySuccess,
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { viewModel.navigateTo(AppSection.WORLD_RULES) }
@@ -214,86 +237,104 @@ fun DashboardScreen(
                         .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = if (warnings.isNotEmpty()) Icons.Default.Warning else Icons.Default.CheckCircle,
-                        contentDescription = "Temporal Status",
-                        tint = if (warnings.isNotEmpty()) VeyronisWarning else VeyronisSuccess,
-                        modifier = Modifier.size(32.dp)
-                    )
+                    Surface(
+                        color = (if (isWarning) LuxuryWarning else LuxurySuccess).copy(alpha = 0.15f),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.size(44.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = if (isWarning) Icons.Default.Warning else Icons.Default.CheckCircle,
+                                contentDescription = "Temporal Status",
+                                tint = if (isWarning) LuxuryWarning else LuxurySuccess,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
                     Spacer(modifier = Modifier.width(16.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = if (warnings.isNotEmpty()) "TEMPORAL WARNINGS (${warnings.size})" else "TEMPORAL CONTINUITY VERIFIED",
+                            text = if (isWarning)
+                                "${Strings.get("warnings_count", language)} (${warnings.size})"
+                            else
+                                (if (language == AppLanguage.ARABIC) "الاتساق الروائي والزمني مكتمل" else "TEMPORAL CONTINUITY VERIFIED"),
                             style = MaterialTheme.typography.titleSmall,
-                            color = if (warnings.isNotEmpty()) VeyronisWarning else VeyronisSuccess,
+                            color = if (isWarning) LuxuryWarning else LuxurySuccess,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = if (warnings.isNotEmpty())
-                                "${warnings.count { it.severity == WarningSeverity.CRITICAL }} critical causal paradoxes detected."
+                            text = if (isWarning)
+                                "${warnings.count { it.severity == WarningSeverity.CRITICAL }} critical paradoxes detected."
                             else
-                                "All event sequences and character appearances are temporally consistent.",
+                                Strings.get("no_warnings", language),
                             style = MaterialTheme.typography.bodySmall,
-                            color = VeyronisTextSecondary
+                            color = LuxuryTextSecondary
                         )
                     }
-                    IconButton(
-                        onClick = { viewModel.navigateTo(AppSection.WORLD_RULES) },
-                        modifier = Modifier.testTag("inspect_warnings_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.ChevronRight,
-                            contentDescription = "Inspect Warnings",
-                            tint = VeyronisTextSecondary
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = "Inspect Warnings",
+                        tint = LuxuryTextMuted
+                    )
                 }
             }
+        }
+
+        // Quick Action: Open Writer
+        item {
+            LuxuryGradientButton(
+                text = Strings.get("open_writer", language),
+                icon = Icons.Default.EditNote,
+                onClick = { viewModel.navigateTo(AppSection.WRITER) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp)
+                    .testTag("dashboard_open_writer_btn")
+            )
         }
 
         // Active Temporal Warnings List Preview
         if (warnings.isNotEmpty()) {
             item {
                 Text(
-                    text = "Continuity Engine Alerts",
+                    text = Strings.get("warnings_count", language),
                     style = MaterialTheme.typography.titleMedium,
-                    color = VeyronisTextPrimary,
+                    color = LuxuryTextPrimary,
                     fontWeight = FontWeight.Bold
                 )
             }
             items(warnings.take(3)) { warning ->
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = VeyronisPanel),
-                    shape = RoundedCornerShape(10.dp),
+                LuxuryGlassCard(
+                    glowColor = if (warning.severity == WarningSeverity.CRITICAL) LuxuryWarning else LuxuryAuroraViolet,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
+                    Column(modifier = Modifier.padding(14.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Surface(
-                                color = if (warning.severity == WarningSeverity.CRITICAL) VeyronisWarning else VeyronisTertiary,
-                                shape = RoundedCornerShape(4.dp)
+                                color = if (warning.severity == WarningSeverity.CRITICAL) LuxuryWarning.copy(alpha = 0.2f) else LuxuryAuroraViolet.copy(alpha = 0.2f),
+                                shape = RoundedCornerShape(6.dp)
                             ) {
                                 Text(
                                     text = warning.severity.name,
-                                    color = Color.Black,
+                                    color = if (warning.severity == WarningSeverity.CRITICAL) LuxuryWarning else LuxuryAuroraViolet,
                                     style = MaterialTheme.typography.labelSmall,
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                    fontWeight = FontWeight.Bold
+                                    fontWeight = FontWeight.ExtraBold
                                 )
                             }
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = warning.title,
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = VeyronisTextPrimary,
+                                color = LuxuryTextPrimary,
                                 fontWeight = FontWeight.SemiBold
                             )
                         }
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
                         Text(
                             text = warning.description,
                             style = MaterialTheme.typography.bodySmall,
-                            color = VeyronisTextSecondary
+                            color = LuxuryTextSecondary
                         )
                     }
                 }
@@ -303,39 +344,39 @@ fun DashboardScreen(
         // Quick Navigation Launchpad
         item {
             Text(
-                text = "Creative Workspaces",
+                text = if (language == AppLanguage.ARABIC) "مساحات العمل الإضافية" else "Creative Workspaces",
                 style = MaterialTheme.typography.titleMedium,
-                color = VeyronisTextPrimary,
+                color = LuxuryTextPrimary,
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(8.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                WorkspaceTile(
-                    title = "Manuscript Editor",
-                    subtitle = "Write, format, autosave, and view Lexicon links",
-                    icon = Icons.Default.Edit,
-                    color = VeyronisPrimary
-                ) { viewModel.navigateTo(AppSection.WRITER) }
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                LuxuryWorkspaceTile(
+                    title = Strings.get("nav_characters", language),
+                    subtitle = if (language == AppLanguage.ARABIC) "إدارة الشخصيات والعلاقات والأقواس الدرامية" else "Manage character profiles, relationships & arcs",
+                    icon = Icons.Default.People,
+                    color = LuxuryCyberIndigo
+                ) { viewModel.navigateTo(AppSection.CHARACTERS) }
 
-                WorkspaceTile(
-                    title = "Multi-Timeline & Dilation",
-                    subtitle = "Manage cosmic vs local clocks and temporal branches",
-                    icon = Icons.Default.HourglassBottom,
-                    color = VeyronisSecondary
-                ) { viewModel.navigateTo(AppSection.TIMELINE) }
+                LuxuryWorkspaceTile(
+                    title = Strings.get("nav_codex", language),
+                    subtitle = if (language == AppLanguage.ARABIC) "توثيق التكنولوجيا والأساطير والمواقع والمصطلحات" else "Document technology, lore, magic systems & locations",
+                    icon = Icons.Default.AutoStories,
+                    color = LuxurySubtleGold
+                ) { viewModel.navigateTo(AppSection.CODEX) }
 
-                WorkspaceTile(
-                    title = "Causal & Relationship Graphs",
-                    subtitle = "Interactive node canvas for cause/effect & character bonds",
+                LuxuryWorkspaceTile(
+                    title = Strings.get("nav_graphs", language),
+                    subtitle = if (language == AppLanguage.ARABIC) "الشبكة السببية التفاعلية للأسباب والنتائج" else "Interactive node canvas for cause/effect & character bonds",
                     icon = Icons.Default.Hub,
-                    color = VeyronisTertiary
+                    color = LuxuryAuroraViolet
                 ) { viewModel.navigateTo(AppSection.GRAPHS) }
 
-                WorkspaceTile(
-                    title = "Export & GitHub Sync",
-                    subtitle = "PDF, EPUB, Markdown export, Cloud sync & In-App updates",
-                    icon = Icons.Default.CloudSync,
-                    color = Color(0xFF34D399)
+                LuxuryWorkspaceTile(
+                    title = Strings.get("nav_settings", language),
+                    subtitle = if (language == AppLanguage.ARABIC) "تصدير الرواية، النسخ الاحتياطي، وإعدادات اللغة" else "Publishing export, backups, and app language",
+                    icon = Icons.Default.Settings,
+                    color = LuxuryElectricCyan
                 ) { viewModel.navigateTo(AppSection.SETTINGS) }
             }
         }
@@ -343,17 +384,16 @@ fun DashboardScreen(
 }
 
 @Composable
-fun MetricCard(
+fun LuxuryMetricCard(
     modifier: Modifier = Modifier,
     title: String,
     value: String,
     icon: ImageVector,
-    color: Color,
+    glowColor: Color,
     onClick: () -> Unit
 ) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = VeyronisPanel),
-        shape = RoundedCornerShape(12.dp),
+    LuxuryGlassCard(
+        glowColor = glowColor,
         modifier = modifier
             .clickable(onClick = onClick)
             .testTag("metric_card_${title.lowercase()}")
@@ -364,25 +404,47 @@ fun MetricCard(
                 .padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Icon(imageVector = icon, contentDescription = title, tint = color, modifier = Modifier.size(22.dp))
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(text = value, style = MaterialTheme.typography.titleMedium, color = VeyronisTextPrimary, fontWeight = FontWeight.Bold)
-            Text(text = title, style = MaterialTheme.typography.labelSmall, color = VeyronisTextMuted)
+            Surface(
+                color = glowColor.copy(alpha = 0.15f),
+                shape = CircleShape,
+                modifier = Modifier.size(36.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = title,
+                        tint = glowColor,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleMedium,
+                color = LuxuryTextPrimary,
+                fontWeight = FontWeight.ExtraBold
+            )
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelSmall,
+                color = LuxuryTextSecondary,
+                maxLines = 1
+            )
         }
     }
 }
 
 @Composable
-fun WorkspaceTile(
+fun LuxuryWorkspaceTile(
     title: String,
     subtitle: String,
     icon: ImageVector,
     color: Color,
     onClick: () -> Unit
 ) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = VeyronisPanel),
-        shape = RoundedCornerShape(12.dp),
+    LuxuryGlassCard(
+        glowColor = color,
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
@@ -395,20 +457,39 @@ fun WorkspaceTile(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
-                color = color.copy(alpha = 0.2f),
-                shape = RoundedCornerShape(8.dp),
-                modifier = Modifier.size(40.dp)
+                color = color.copy(alpha = 0.15f),
+                shape = RoundedCornerShape(12.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, color.copy(alpha = 0.3f)),
+                modifier = Modifier.size(44.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(imageVector = icon, contentDescription = title, tint = color, modifier = Modifier.size(22.dp))
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = title,
+                        tint = color,
+                        modifier = Modifier.size(22.dp)
+                    )
                 }
             }
             Spacer(modifier = Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = title, style = MaterialTheme.typography.bodyMedium, color = VeyronisTextPrimary, fontWeight = FontWeight.SemiBold)
-                Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = VeyronisTextSecondary)
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = LuxuryTextPrimary,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = LuxuryTextSecondary
+                )
             }
-            Icon(imageVector = Icons.Default.ChevronRight, contentDescription = "Navigate", tint = VeyronisTextMuted)
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = "Navigate",
+                tint = LuxuryTextMuted
+            )
         }
     }
 }

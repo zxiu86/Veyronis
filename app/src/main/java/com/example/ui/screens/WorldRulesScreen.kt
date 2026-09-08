@@ -21,7 +21,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.model.WorldRule
 import com.example.domain.WarningSeverity
+import com.example.ui.AppLanguage
+import com.example.ui.Strings
 import com.example.ui.VeyronisViewModel
+import com.example.ui.components.LuxuryGlassCard
+import com.example.ui.components.LuxuryGradientButton
 import com.example.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -32,6 +36,7 @@ fun WorldRulesScreen(
 ) {
     val allWorldRules by viewModel.allWorldRules.collectAsStateWithLifecycle()
     val warnings by viewModel.temporalWarnings.collectAsStateWithLifecycle()
+    val language by viewModel.appLanguage.collectAsStateWithLifecycle()
 
     var selectedTab by remember { mutableIntStateOf(0) } // 0: World Rules, 1: Continuity Engine
     var showEditRuleDialog by remember { mutableStateOf(false) }
@@ -39,7 +44,7 @@ fun WorldRulesScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        containerColor = VeyronisBackground,
+        containerColor = Color.Transparent,
         floatingActionButton = {
             if (selectedTab == 0) {
                 FloatingActionButton(
@@ -47,11 +52,12 @@ fun WorldRulesScreen(
                         ruleToEdit = WorldRule(name = "")
                         showEditRuleDialog = true
                     },
-                    containerColor = VeyronisPrimary,
-                    contentColor = VeyronisTextPrimary,
+                    containerColor = LuxuryElectricCyan,
+                    contentColor = LuxuryVoidBackground,
+                    shape = RoundedCornerShape(16.dp),
                     modifier = Modifier.testTag("add_world_rule_fab")
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "Add Rule")
+                    Icon(Icons.Default.Add, contentDescription = Strings.get("worldrules_add", language))
                 }
             }
         }
@@ -64,44 +70,55 @@ fun WorldRulesScreen(
         ) {
             // Header
             Text(
-                text = "Universe Laws & Consistency",
+                text = Strings.get("worldrules_title", language),
                 style = MaterialTheme.typography.headlineSmall,
-                color = VeyronisTextPrimary,
+                color = LuxuryTextPrimary,
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = "Define fictional physics and detect timeline contradictions automatically",
+                text = if (language == AppLanguage.ARABIC) "تحديد قوانين فيزياء العالم وكشف تناقضات الخطوط الزمنية تلقائياً" else "Define fictional physics and detect timeline contradictions automatically",
                 style = MaterialTheme.typography.bodySmall,
-                color = VeyronisTextSecondary
+                color = LuxuryTextSecondary
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             PrimaryTabRow(
                 selectedTabIndex = selectedTab,
-                containerColor = VeyronisPanel,
-                contentColor = VeyronisPrimary
+                containerColor = LuxurySurface,
+                contentColor = LuxuryElectricCyan,
+                divider = { HorizontalDivider(color = LuxurySurfaceHighlight) }
             ) {
                 Tab(
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 },
-                    text = { Text("World Rules (${allWorldRules.size})") }
+                    text = {
+                        Text(
+                            text = "${Strings.get("worldrules_tab_rules", language)} (${allWorldRules.size})",
+                            color = if (selectedTab == 0) LuxuryElectricCyan else LuxuryTextSecondary,
+                            fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal
+                        )
+                    }
                 )
                 Tab(
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
                     text = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("Continuity Engine")
+                            Text(
+                                text = Strings.get("worldrules_tab_continuity", language),
+                                color = if (selectedTab == 1) LuxuryElectricCyan else LuxuryTextSecondary,
+                                fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal
+                            )
                             if (warnings.isNotEmpty()) {
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Surface(
-                                    color = VeyronisWarning,
+                                    color = LuxuryWarning,
                                     shape = RoundedCornerShape(10.dp)
                                 ) {
                                     Text(
-                                        text = warnings.size.toString(),
-                                        color = Color.Black,
+                                        text = "${warnings.size}",
+                                        color = LuxuryVoidBackground,
                                         style = MaterialTheme.typography.labelSmall,
                                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                         fontWeight = FontWeight.Bold
@@ -116,132 +133,119 @@ fun WorldRulesScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             if (selectedTab == 0) {
-                // World Rules Tab
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(allWorldRules) { rule ->
-                        WorldRuleCard(
-                            rule = rule,
-                            onEdit = {
-                                ruleToEdit = rule
-                                showEditRuleDialog = true
-                            },
-                            onDelete = { viewModel.deleteWorldRule(rule) }
+                // Tab 0: World Rules List
+                if (allWorldRules.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(
+                            text = Strings.get("no_worldrules_prompt", language),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = LuxuryTextSecondary
                         )
-                    }
-                }
-            } else {
-                // Consistency Warnings Tab
-                if (warnings.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(24.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(
-                                imageVector = Icons.Default.CheckCircle,
-                                contentDescription = null,
-                                tint = VeyronisSuccess,
-                                modifier = Modifier.size(56.dp)
-                            )
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Text(
-                                text = "Zero Temporal Paradoxes Found",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = VeyronisTextPrimary,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "Every event sequence, character appearance, and timeline dilation obeys universal causality laws.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = VeyronisTextSecondary,
-                                modifier = Modifier.padding(top = 4.dp)
-                            )
-                        }
                     }
                 } else {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        items(warnings) { warning ->
-                            Card(
-                                colors = CardDefaults.cardColors(containerColor = VeyronisPanel),
-                                shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier.fillMaxWidth().testTag("warning_card_${warning.id}")
-                            ) {
-                                Column(modifier = Modifier.padding(16.dp)) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
+                        items(allWorldRules) { rule ->
+                            LuxuryWorldRuleCard(
+                                rule = rule,
+                                language = language,
+                                onEdit = {
+                                    ruleToEdit = rule
+                                    showEditRuleDialog = true
+                                },
+                                onDelete = { viewModel.deleteWorldRule(rule) }
+                            )
+                        }
+                    }
+                }
+            } else {
+                // Tab 1: Temporal Continuity Engine Status
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    item {
+                        LuxuryGlassCard(
+                            glowColor = if (warnings.isNotEmpty()) LuxuryWarning else LuxurySuccess,
+                            modifier = Modifier.fillMaxWidth().testTag("temporal_engine_card")
+                        ) {
+                            Column(modifier = Modifier.padding(18.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Surface(
+                                        color = (if (warnings.isNotEmpty()) LuxuryWarning else LuxurySuccess).copy(alpha = 0.15f),
+                                        shape = RoundedCornerShape(12.dp),
+                                        modifier = Modifier.size(44.dp)
                                     ) {
-                                        Surface(
-                                            color = when (warning.severity) {
-                                                WarningSeverity.CRITICAL -> VeyronisWarning
-                                                WarningSeverity.WARNING -> VeyronisTertiary
-                                                WarningSeverity.ADVISORY -> VeyronisSecondary
-                                            },
-                                            shape = RoundedCornerShape(4.dp)
-                                        ) {
-                                            Text(
-                                                text = warning.severity.name,
-                                                color = Color.Black,
-                                                style = MaterialTheme.typography.labelSmall,
-                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                        }
-
-                                        if (warning.cosmicTimestamp != null) {
-                                            Text(
-                                                text = "Cosmic: ${warning.cosmicTimestamp}",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = VeyronisTextMuted
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Icon(
+                                                imageVector = if (warnings.isNotEmpty()) Icons.Default.Warning else Icons.Default.CheckCircle,
+                                                contentDescription = null,
+                                                tint = if (warnings.isNotEmpty()) LuxuryWarning else LuxurySuccess,
+                                                modifier = Modifier.size(24.dp)
                                             )
                                         }
                                     }
-
-                                    Spacer(modifier = Modifier.height(8.dp))
-
-                                    Text(
-                                        text = warning.title,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = VeyronisTextPrimary,
-                                        fontWeight = FontWeight.Bold
-                                    )
-
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = warning.description,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = VeyronisTextSecondary
-                                    )
-
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    HorizontalDivider(color = VeyronisSurfaceHighlight)
-                                    Spacer(modifier = Modifier.height(8.dp))
-
-                                    Row(verticalAlignment = Alignment.Top) {
-                                        Icon(
-                                            imageVector = Icons.Default.Lightbulb,
-                                            contentDescription = null,
-                                            tint = VeyronisSecondary,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(6.dp))
+                                    Spacer(modifier = Modifier.width(14.dp))
+                                    Column {
                                         Text(
-                                            text = "Fix: ${warning.recommendation}",
+                                            text = if (warnings.isNotEmpty())
+                                                (if (language == AppLanguage.ARABIC) "تم اكتشاف تناقضات زمنية" else "Temporal Paradoxes Detected")
+                                            else
+                                                (if (language == AppLanguage.ARABIC) "جميع الخطوط الزمنية متسقة بالكامل" else "Timeline Fully Consistent"),
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = if (warnings.isNotEmpty()) LuxuryWarning else LuxurySuccess,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = "${warnings.size} ${Strings.get("warnings_count", language)}",
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = VeyronisSecondary,
-                                            fontWeight = FontWeight.Medium
+                                            color = LuxuryTextSecondary
                                         )
                                     }
                                 }
+                            }
+                        }
+                    }
+
+                    items(warnings) { warning ->
+                        LuxuryGlassCard(
+                            glowColor = if (warning.severity == WarningSeverity.CRITICAL) LuxuryWarning else LuxuryAuroraViolet,
+                            modifier = Modifier.fillMaxWidth().testTag("warning_item_${warning.severity.name.lowercase()}")
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Surface(
+                                        color = if (warning.severity == WarningSeverity.CRITICAL) LuxuryWarning.copy(alpha = 0.2f) else LuxuryAuroraViolet.copy(alpha = 0.2f),
+                                        shape = RoundedCornerShape(6.dp)
+                                    ) {
+                                        Text(
+                                            text = warning.severity.name,
+                                            color = if (warning.severity == WarningSeverity.CRITICAL) LuxuryWarning else LuxuryAuroraViolet,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                            fontWeight = FontWeight.ExtraBold
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = warning.title,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = LuxuryTextPrimary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = warning.description,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = LuxuryTextSecondary
+                                )
                             }
                         }
                     }
@@ -250,7 +254,7 @@ fun WorldRulesScreen(
         }
     }
 
-    // Dialog: Add / Edit World Rule
+    // Dialog: Edit / Create World Rule
     if (showEditRuleDialog && ruleToEdit != null) {
         val editing = ruleToEdit!!
         var name by remember { mutableStateOf(editing.name) }
@@ -264,8 +268,14 @@ fun WorldRulesScreen(
 
         AlertDialog(
             onDismissRequest = { showEditRuleDialog = false },
-            containerColor = VeyronisPanel,
-            title = { Text(if (editing.id == 0L) "Define World Rule" else "Edit World Rule", color = VeyronisTextPrimary) },
+            containerColor = LuxurySurface,
+            title = {
+                Text(
+                    text = if (editing.id == 0L) Strings.get("worldrules_add", language) else (if (language == AppLanguage.ARABIC) "تعديل قانون" else "Edit Rule"),
+                    color = LuxuryTextPrimary,
+                    fontWeight = FontWeight.Bold
+                )
+            },
             text = {
                 Column(
                     modifier = Modifier
@@ -277,63 +287,109 @@ fun WorldRulesScreen(
                     OutlinedTextField(
                         value = name,
                         onValueChange = { name = it },
-                        label = { Text("Rule Name (e.g. Temporal Distortion) *") },
+                        label = { Text(Strings.get("worldrules_name", language) + " *") },
                         modifier = Modifier.fillMaxWidth().testTag("world_rule_name_input"),
-                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = VeyronisPrimary, focusedTextColor = VeyronisTextPrimary, unfocusedTextColor = VeyronisTextPrimary)
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = LuxuryElectricCyan,
+                            focusedTextColor = LuxuryTextPrimary,
+                            unfocusedTextColor = LuxuryTextPrimary,
+                            unfocusedContainerColor = LuxurySurfaceElevated,
+                            focusedContainerColor = LuxurySurfaceElevated
+                        )
                     )
                     OutlinedTextField(
                         value = category,
                         onValueChange = { category = it },
-                        label = { Text("Category (Physics, Temporal, Magic, Law)") },
+                        label = { Text(Strings.get("worldrules_category", language)) },
                         modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = VeyronisPrimary, focusedTextColor = VeyronisTextPrimary, unfocusedTextColor = VeyronisTextPrimary)
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = LuxuryElectricCyan,
+                            focusedTextColor = LuxuryTextPrimary,
+                            unfocusedTextColor = LuxuryTextPrimary,
+                            unfocusedContainerColor = LuxurySurfaceElevated,
+                            focusedContainerColor = LuxurySurfaceElevated
+                        )
                     )
                     OutlinedTextField(
                         value = description,
                         onValueChange = { description = it },
-                        label = { Text("Scientific / Lore Description") },
+                        label = { Text(if (language == AppLanguage.ARABIC) "الوصف العلمي والقصصي" else "Scientific / Lore Description") },
                         modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = VeyronisPrimary, focusedTextColor = VeyronisTextPrimary, unfocusedTextColor = VeyronisTextPrimary)
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = LuxuryElectricCyan,
+                            focusedTextColor = LuxuryTextPrimary,
+                            unfocusedTextColor = LuxuryTextPrimary,
+                            unfocusedContainerColor = LuxurySurfaceElevated,
+                            focusedContainerColor = LuxurySurfaceElevated
+                        )
                     )
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedTextField(
                             value = localTimeStr,
                             onValueChange = { localTimeStr = it },
-                            label = { Text("Local Seconds") },
+                            label = { Text(if (language == AppLanguage.ARABIC) "الثواني المحلية" else "Local Seconds") },
                             modifier = Modifier.weight(1f),
-                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = VeyronisPrimary, focusedTextColor = VeyronisTextPrimary, unfocusedTextColor = VeyronisTextPrimary)
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = LuxuryElectricCyan,
+                                focusedTextColor = LuxuryTextPrimary,
+                                unfocusedTextColor = LuxuryTextPrimary,
+                                unfocusedContainerColor = LuxurySurfaceElevated,
+                                focusedContainerColor = LuxurySurfaceElevated
+                            )
                         )
                         OutlinedTextField(
                             value = externalTimeStr,
                             onValueChange = { externalTimeStr = it },
-                            label = { Text("External Years") },
+                            label = { Text(if (language == AppLanguage.ARABIC) "السنوات الخارجية" else "External Years") },
                             modifier = Modifier.weight(1f),
-                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = VeyronisPrimary, focusedTextColor = VeyronisTextPrimary, unfocusedTextColor = VeyronisTextPrimary)
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = LuxuryElectricCyan,
+                                focusedTextColor = LuxuryTextPrimary,
+                                unfocusedTextColor = LuxuryTextPrimary,
+                                unfocusedContainerColor = LuxurySurfaceElevated,
+                                focusedContainerColor = LuxurySurfaceElevated
+                            )
                         )
                     }
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedTextField(
                             value = efficiencyStr,
                             onValueChange = { efficiencyStr = it },
-                            label = { Text("Efficiency %") },
+                            label = { Text(if (language == AppLanguage.ARABIC) "الكفاءة %" else "Efficiency %") },
                             modifier = Modifier.weight(1f),
-                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = VeyronisPrimary, focusedTextColor = VeyronisTextPrimary, unfocusedTextColor = VeyronisTextPrimary)
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = LuxuryElectricCyan,
+                                focusedTextColor = LuxuryTextPrimary,
+                                unfocusedTextColor = LuxuryTextPrimary,
+                                unfocusedContainerColor = LuxurySurfaceElevated,
+                                focusedContainerColor = LuxurySurfaceElevated
+                            )
                         )
                         OutlinedTextField(
                             value = energyType,
                             onValueChange = { energyType = it },
-                            label = { Text("Energy Medium") },
+                            label = { Text(if (language == AppLanguage.ARABIC) "نوع الطاقة" else "Energy Medium") },
                             modifier = Modifier.weight(1f),
-                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = VeyronisPrimary, focusedTextColor = VeyronisTextPrimary, unfocusedTextColor = VeyronisTextPrimary)
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = LuxuryElectricCyan,
+                                focusedTextColor = LuxuryTextPrimary,
+                                unfocusedTextColor = LuxuryTextPrimary,
+                                unfocusedContainerColor = LuxurySurfaceElevated,
+                                focusedContainerColor = LuxurySurfaceElevated
+                            )
                         )
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Checkbox(
                             checked = enablesTimeTravel,
                             onCheckedChange = { enablesTimeTravel = it },
-                            colors = CheckboxDefaults.colors(checkedColor = VeyronisSecondary)
+                            colors = CheckboxDefaults.colors(checkedColor = LuxuryElectricCyan)
                         )
-                        Text("Enables Closed-Timelike Loop / Travel", color = VeyronisTextPrimary, style = MaterialTheme.typography.bodySmall)
+                        Text(
+                            text = if (language == AppLanguage.ARABIC) "يتيح حلقة / سفر عبر الزمن مغلق" else "Enables Closed-Timelike Loop / Travel",
+                            color = LuxuryTextPrimary,
+                            style = MaterialTheme.typography.bodySmall
+                        )
                     }
                 }
             },
@@ -355,15 +411,16 @@ fun WorldRulesScreen(
                             showEditRuleDialog = false
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = VeyronisPrimary),
+                    colors = ButtonDefaults.buttonColors(containerColor = LuxuryElectricCyan),
+                    shape = RoundedCornerShape(10.dp),
                     modifier = Modifier.testTag("save_world_rule_button")
                 ) {
-                    Text("Save Rule")
+                    Text(Strings.get("save", language), color = LuxuryVoidBackground, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showEditRuleDialog = false }) {
-                    Text("Cancel", color = VeyronisTextSecondary)
+                    Text(Strings.get("cancel", language), color = LuxuryTextSecondary)
                 }
             }
         )
@@ -371,14 +428,14 @@ fun WorldRulesScreen(
 }
 
 @Composable
-fun WorldRuleCard(
+fun LuxuryWorldRuleCard(
     rule: WorldRule,
+    language: AppLanguage,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = VeyronisPanel),
-        shape = RoundedCornerShape(12.dp),
+    LuxuryGlassCard(
+        glowColor = LuxuryElectricCyan,
         modifier = Modifier.fillMaxWidth().testTag("world_rule_card_${rule.name.lowercase().replace(" ", "_")}")
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -388,38 +445,39 @@ fun WorldRuleCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Surface(
-                    color = VeyronisPrimaryContainer,
-                    shape = RoundedCornerShape(6.dp)
+                    color = LuxuryElectricCyan.copy(alpha = 0.15f),
+                    shape = RoundedCornerShape(8.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, LuxuryElectricCyan.copy(alpha = 0.3f))
                 ) {
                     Text(
                         text = rule.category.uppercase(),
-                        color = VeyronisPrimary,
+                        color = LuxuryElectricCyan,
                         style = MaterialTheme.typography.labelSmall,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                        fontWeight = FontWeight.Bold
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                        fontWeight = FontWeight.ExtraBold
                     )
                 }
 
                 Row {
                     IconButton(onClick = onEdit, modifier = Modifier.size(28.dp)) {
-                        Icon(Icons.Default.Edit, contentDescription = "Edit", tint = VeyronisTextSecondary, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Edit, contentDescription = Strings.get("edit", language), tint = LuxuryTextSecondary, modifier = Modifier.size(16.dp))
                     }
                     IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
-                        Icon(Icons.Default.Delete, contentDescription = "Delete", tint = VeyronisWarning, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Delete, contentDescription = Strings.get("delete", language), tint = LuxuryWarning, modifier = Modifier.size(16.dp))
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(text = rule.name, style = MaterialTheme.typography.titleMedium, color = VeyronisTextPrimary, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(text = rule.name, style = MaterialTheme.typography.titleMedium, color = LuxuryTextPrimary, fontWeight = FontWeight.Bold)
 
             if (rule.description.isNotBlank()) {
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(text = rule.description, style = MaterialTheme.typography.bodySmall, color = VeyronisTextSecondary)
+                Text(text = rule.description, style = MaterialTheme.typography.bodySmall, color = LuxuryTextSecondary)
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
-            HorizontalDivider(color = VeyronisSurfaceHighlight)
+            Spacer(modifier = Modifier.height(10.dp))
+            HorizontalDivider(color = LuxurySurfaceHighlight)
             Spacer(modifier = Modifier.height(8.dp))
 
             Row(
@@ -427,14 +485,16 @@ fun WorldRuleCard(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Dilation: ${rule.localTimeEquivalentSeconds}s local = ${rule.externalTimeEquivalentYears} yrs external",
+                    text = "${if (language == AppLanguage.ARABIC) "التمدد" else "Dilation"}: ${rule.localTimeEquivalentSeconds}s = ${rule.externalTimeEquivalentYears} ${if (language == AppLanguage.ARABIC) "سنة" else "yrs"}",
                     style = MaterialTheme.typography.labelSmall,
-                    color = VeyronisTertiary
+                    color = LuxuryAuroraViolet,
+                    fontWeight = FontWeight.SemiBold
                 )
                 Text(
-                    text = "Efficiency: ${rule.efficiencyPercent}%",
+                    text = "${if (language == AppLanguage.ARABIC) "الكفاءة" else "Efficiency"}: ${rule.efficiencyPercent}%",
                     style = MaterialTheme.typography.labelSmall,
-                    color = VeyronisSecondary
+                    color = LuxuryCyberIndigo,
+                    fontWeight = FontWeight.SemiBold
                 )
             }
         }

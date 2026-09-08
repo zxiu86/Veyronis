@@ -19,7 +19,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.ui.AppLanguage
 import com.example.ui.AppSection
+import com.example.ui.Strings
 import com.example.ui.VeyronisViewModel
 import com.example.ui.theme.*
 
@@ -52,12 +54,13 @@ fun GlobalSearchScreen(
     val allCodex by viewModel.allCodexEntries.collectAsStateWithLifecycle()
     val allEvents by viewModel.allStoryEvents.collectAsStateWithLifecycle()
     val allRules by viewModel.allWorldRules.collectAsStateWithLifecycle()
+    val language by viewModel.appLanguage.collectAsStateWithLifecycle()
 
     var searchQuery by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf(SearchCategoryFilter.ALL) }
 
     val results: List<SearchResultItem> = remember(
-        searchQuery, selectedFilter, allScenes, allCharacters, allCodex, allEvents, allRules
+        searchQuery, selectedFilter, allScenes, allCharacters, allCodex, allEvents, allRules, language
     ) {
         if (searchQuery.isBlank()) return@remember emptyList()
 
@@ -72,12 +75,12 @@ fun GlobalSearchScreen(
                         val start = (idx - 30).coerceAtLeast(0)
                         val end = (idx + searchQuery.length + 50).coerceAtMost(scene.content.length)
                         "..." + scene.content.substring(start, end).replace("\n", " ") + "..."
-                    } else "Title match"
+                    } else (if (language == AppLanguage.ARABIC) "تطابق في العنوان" else "Title match")
                     list.add(
                         SearchResultItem(
                             title = scene.title,
                             subtitle = snippet,
-                            type = "Scene",
+                            type = if (language == AppLanguage.ARABIC) "مشهد" else "Scene",
                             typeColor = VeyronisPrimary,
                             targetSection = AppSection.WRITER,
                             onAction = {
@@ -100,8 +103,8 @@ fun GlobalSearchScreen(
                     list.add(
                         SearchResultItem(
                             title = char.name,
-                            subtitle = "Status: ${char.currentStatus} • ${char.origin}",
-                            type = "Character",
+                            subtitle = "${if (language == AppLanguage.ARABIC) "الحالة" else "Status"}: ${char.currentStatus} • ${char.origin}",
+                            type = if (language == AppLanguage.ARABIC) "شخصية" else "Character",
                             typeColor = VeyronisSecondary,
                             targetSection = AppSection.CHARACTERS,
                             onAction = { viewModel.navigateTo(AppSection.CHARACTERS) }
@@ -122,7 +125,7 @@ fun GlobalSearchScreen(
                         SearchResultItem(
                             title = entry.title,
                             subtitle = "[${entry.category}] ${entry.summary}",
-                            type = "Codex",
+                            type = if (language == AppLanguage.ARABIC) "موسوعة" else "Codex",
                             typeColor = VeyronisTertiary,
                             targetSection = AppSection.CODEX,
                             onAction = { viewModel.navigateTo(AppSection.CODEX) }
@@ -142,8 +145,8 @@ fun GlobalSearchScreen(
                     list.add(
                         SearchResultItem(
                             title = event.title,
-                            subtitle = "Cosmic: ${event.cosmicTimestamp} • ${event.summary}",
-                            type = "Event",
+                            subtitle = "${if (language == AppLanguage.ARABIC) "كوني" else "Cosmic"}: ${event.cosmicTimestamp} • ${event.summary}",
+                            type = if (language == AppLanguage.ARABIC) "حدث" else "Event",
                             typeColor = Color(0xFFE879F9),
                             targetSection = AppSection.EVENTS,
                             onAction = { viewModel.navigateTo(AppSection.EVENTS) }
@@ -163,7 +166,7 @@ fun GlobalSearchScreen(
                         SearchResultItem(
                             title = rule.name,
                             subtitle = "${rule.category} • ${rule.description}",
-                            type = "World Rule",
+                            type = if (language == AppLanguage.ARABIC) "قاعدة عالم" else "World Rule",
                             typeColor = Color(0xFF34D399),
                             targetSection = AppSection.WORLD_RULES,
                             onAction = { viewModel.navigateTo(AppSection.WORLD_RULES) }
@@ -183,13 +186,13 @@ fun GlobalSearchScreen(
             .padding(16.dp)
     ) {
         Text(
-            text = "Omni-Search Engine",
+            text = Strings.get("search_title", language),
             style = MaterialTheme.typography.headlineSmall,
             color = VeyronisTextPrimary,
             fontWeight = FontWeight.Bold
         )
         Text(
-            text = "Cross-index manuscripts, characters, codex entries, events, and physics rules",
+            text = if (language == AppLanguage.ARABIC) "فهرسة شاملة للمخطوطات والشخصيات والموسوعة والأحداث وقوانين الفيزياء" else "Cross-index manuscripts, characters, codex entries, events, and physics rules",
             style = MaterialTheme.typography.bodySmall,
             color = VeyronisTextSecondary
         )
@@ -199,12 +202,12 @@ fun GlobalSearchScreen(
         OutlinedTextField(
             value = searchQuery,
             onValueChange = { searchQuery = it },
-            placeholder = { Text("Search entire Veyronis universe...", color = VeyronisTextMuted) },
+            placeholder = { Text(Strings.get("search_placeholder", language), color = VeyronisTextMuted) },
             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = VeyronisPrimary) },
             trailingIcon = {
                 if (searchQuery.isNotEmpty()) {
                     IconButton(onClick = { searchQuery = "" }) {
-                        Icon(Icons.Default.Close, contentDescription = "Clear", tint = VeyronisTextSecondary)
+                        Icon(Icons.Default.Close, contentDescription = Strings.get("search_clear", language), tint = VeyronisTextSecondary)
                     }
                 }
             },
@@ -232,10 +235,18 @@ fun GlobalSearchScreen(
         ) {
             for (filter in SearchCategoryFilter.values()) {
                 val isSelected = filter == selectedFilter
+                val labelText = when (filter) {
+                    SearchCategoryFilter.ALL -> Strings.get("search_filter_all", language)
+                    SearchCategoryFilter.MANUSCRIPT -> Strings.get("nav_writer", language)
+                    SearchCategoryFilter.CHARACTERS -> Strings.get("nav_characters", language)
+                    SearchCategoryFilter.CODEX -> Strings.get("nav_codex", language)
+                    SearchCategoryFilter.EVENTS -> Strings.get("nav_events", language)
+                    SearchCategoryFilter.RULES -> Strings.get("nav_rules", language)
+                }
                 FilterChip(
                     selected = isSelected,
                     onClick = { selectedFilter = filter },
-                    label = { Text(filter.name) },
+                    label = { Text(labelText) },
                     colors = FilterChipDefaults.filterChipColors(
                         selectedContainerColor = VeyronisPrimary,
                         selectedLabelColor = VeyronisTextPrimary,
@@ -251,7 +262,7 @@ fun GlobalSearchScreen(
         if (searchQuery.isBlank()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
-                    text = "Enter a keyword above to scan across all universe archives.",
+                    text = if (language == AppLanguage.ARABIC) "أدخل كلمة مفتاحية أعلاه للمسح عبر جميع أرشيفات الكون." else "Enter a keyword above to scan across all universe archives.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = VeyronisTextMuted
                 )
@@ -259,14 +270,14 @@ fun GlobalSearchScreen(
         } else if (results.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
-                    text = "No results found for '$searchQuery'.",
+                    text = if (language == AppLanguage.ARABIC) "لا توجد نتائج مطابقة لـ '$searchQuery'." else "No results found for '$searchQuery'.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = VeyronisTextMuted
                 )
             }
         } else {
             Text(
-                text = "${results.size} matches found",
+                text = "${results.size} ${Strings.get("search_results_count", language)}",
                 style = MaterialTheme.typography.labelMedium,
                 color = VeyronisTextSecondary,
                 modifier = Modifier.padding(bottom = 8.dp)

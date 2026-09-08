@@ -21,7 +21,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.model.Character
+import com.example.ui.AppLanguage
+import com.example.ui.Strings
 import com.example.ui.VeyronisViewModel
+import com.example.ui.components.LuxuryGlassCard
+import com.example.ui.components.LuxuryGradientButton
 import com.example.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -33,12 +37,12 @@ fun CharactersScreen(
     val allCharacters by viewModel.allCharacters.collectAsStateWithLifecycle()
     val allRelationships by viewModel.allRelationships.collectAsStateWithLifecycle()
     val allScenes by viewModel.allScenes.collectAsStateWithLifecycle()
+    val language by viewModel.appLanguage.collectAsStateWithLifecycle()
 
     var searchQuery by remember { mutableStateOf("") }
     var selectedCharacter by remember { mutableStateOf<Character?>(null) }
     var showEditDialog by remember { mutableStateOf(false) }
     var characterToEdit by remember { mutableStateOf<Character?>(null) }
-    var showAddRelationshipDialog by remember { mutableStateOf(false) }
 
     val filteredCharacters = remember(allCharacters, searchQuery) {
         if (searchQuery.isBlank()) allCharacters
@@ -51,18 +55,19 @@ fun CharactersScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        containerColor = VeyronisBackground,
+        containerColor = Color.Transparent,
         floatingActionButton = {
             FloatingActionButton(
                 onClick = {
                     characterToEdit = Character(name = "")
                     showEditDialog = true
                 },
-                containerColor = VeyronisPrimary,
-                contentColor = VeyronisTextPrimary,
+                containerColor = LuxuryElectricCyan,
+                contentColor = LuxuryVoidBackground,
+                shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.testTag("add_character_fab")
             ) {
-                Icon(Icons.Default.PersonAdd, contentDescription = "Add Character")
+                Icon(Icons.Default.PersonAdd, contentDescription = Strings.get("char_add", language))
             }
         }
     ) { innerPadding ->
@@ -79,33 +84,39 @@ fun CharactersScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Character Database",
+                    text = Strings.get("char_db_title", language),
                     style = MaterialTheme.typography.headlineSmall,
-                    color = VeyronisTextPrimary,
+                    color = LuxuryTextPrimary,
                     fontWeight = FontWeight.Bold
                 )
-                Text(
-                    text = "${allCharacters.size} Characters Registered",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = VeyronisTextMuted
-                )
+                Surface(
+                    color = LuxurySurfaceElevated,
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(
+                        text = "${allCharacters.size} ${Strings.get("char_registered_count", language)}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = LuxuryTextSecondary,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                placeholder = { Text("Search by name, alias, origin...", color = VeyronisTextMuted) },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = VeyronisTextSecondary) },
+                placeholder = { Text(Strings.get("char_search_hint", language), color = LuxuryTextMuted) },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = LuxuryTextSecondary) },
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = VeyronisSecondary,
-                    focusedTextColor = VeyronisTextPrimary,
-                    unfocusedTextColor = VeyronisTextPrimary,
-                    unfocusedContainerColor = VeyronisPanel,
-                    focusedContainerColor = VeyronisPanel
+                    focusedBorderColor = LuxuryElectricCyan,
+                    focusedTextColor = LuxuryTextPrimary,
+                    unfocusedTextColor = LuxuryTextPrimary,
+                    unfocusedContainerColor = LuxurySurface,
+                    focusedContainerColor = LuxurySurface
                 ),
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(14.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("character_search_input")
@@ -128,10 +139,11 @@ fun CharactersScreen(
                         it.sourceCharacterId == character.id || it.targetCharacterId == character.id
                     }
 
-                    CharacterCard(
+                    LuxuryCharacterCard(
                         character = character,
                         appearancesCount = appearancesCount,
                         relationshipCount = charRelationships.size,
+                        language = language,
                         onClick = { selectedCharacter = character },
                         onEdit = {
                             characterToEdit = character
@@ -156,19 +168,19 @@ fun CharactersScreen(
 
         AlertDialog(
             onDismissRequest = { selectedCharacter = null },
-            containerColor = VeyronisPanel,
+            containerColor = LuxurySurface,
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         modifier = Modifier
-                            .size(16.dp)
+                            .size(18.dp)
                             .background(
-                                color = try { Color(android.graphics.Color.parseColor(char.primaryColorHex)) } catch (e: Exception) { VeyronisPrimary },
+                                color = try { Color(android.graphics.Color.parseColor(char.primaryColorHex)) } catch (e: Exception) { LuxuryElectricCyan },
                                 shape = CircleShape
                             )
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = char.name, color = VeyronisTextPrimary, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(text = char.name, color = LuxuryTextPrimary, fontWeight = FontWeight.Bold)
                 }
             },
             text = {
@@ -180,36 +192,36 @@ fun CharactersScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     if (char.aliases.isNotBlank()) {
-                        Text(text = "Aliases: ${char.aliases}", style = MaterialTheme.typography.bodySmall, color = VeyronisTextSecondary)
+                        Text(text = "${Strings.get("char_alias", language)}: ${char.aliases}", style = MaterialTheme.typography.bodySmall, color = LuxuryTextSecondary)
                     }
-                    Text(text = "Status: ${char.currentStatus} ${if (char.isDeceased) "(Deceased at Cosmic ${char.deathCosmicTime})" else ""}", style = MaterialTheme.typography.bodySmall, color = if (char.isDeceased) VeyronisWarning else VeyronisSuccess)
+                    Text(text = "${Strings.get("char_status", language)}: ${char.currentStatus} ${if (char.isDeceased) "(${if (language == AppLanguage.ARABIC) "متوفى في السنة الكونية" else "Deceased at Cosmic"} ${char.deathCosmicTime})" else ""}", style = MaterialTheme.typography.bodySmall, color = if (char.isDeceased) LuxuryWarning else LuxurySuccess)
                     if (char.age.isNotBlank()) {
-                        Text(text = "Age: ${char.age} • Origin: ${char.origin}", style = MaterialTheme.typography.bodySmall, color = VeyronisTextSecondary)
+                        Text(text = "${Strings.get("char_birth", language)}: ${char.age} • ${Strings.get("char_origin", language)}: ${char.origin}", style = MaterialTheme.typography.bodySmall, color = LuxuryTextSecondary)
                     }
 
-                    HorizontalDivider(color = VeyronisSurfaceHighlight)
+                    HorizontalDivider(color = LuxurySurfaceHighlight)
 
-                    DetailSectionItem("Manuscript Appearances", "$appearancesCount mentions across loaded scenes")
-                    if (char.abilities.isNotBlank()) DetailSectionItem("Abilities & Powers", char.abilities)
-                    if (char.appearance.isNotBlank()) DetailSectionItem("Appearance", char.appearance)
-                    if (char.personality.isNotBlank()) DetailSectionItem("Personality", char.personality)
-                    if (char.strengths.isNotBlank()) DetailSectionItem("Strengths", char.strengths)
-                    if (char.weaknesses.isNotBlank()) DetailSectionItem("Weaknesses", char.weaknesses)
-                    if (char.notes.isNotBlank()) DetailSectionItem("Notes", char.notes)
+                    DetailSectionItem(Strings.get("char_appearances", language), "$appearancesCount ${Strings.get("scenes", language)}")
+                    if (char.abilities.isNotBlank()) DetailSectionItem(Strings.get("char_abilities", language), char.abilities)
+                    if (char.appearance.isNotBlank()) DetailSectionItem(if (language == AppLanguage.ARABIC) "المظهر الخارجي" else "Appearance", char.appearance)
+                    if (char.personality.isNotBlank()) DetailSectionItem(if (language == AppLanguage.ARABIC) "السمات الشخصية" else "Personality", char.personality)
+                    if (char.strengths.isNotBlank()) DetailSectionItem(if (language == AppLanguage.ARABIC) "نقاط القوة" else "Strengths", char.strengths)
+                    if (char.weaknesses.isNotBlank()) DetailSectionItem(if (language == AppLanguage.ARABIC) "نقاط الضعف" else "Weaknesses", char.weaknesses)
+                    if (char.notes.isNotBlank()) DetailSectionItem(Strings.get("char_notes", language), char.notes)
 
                     if (charRelationships.isNotEmpty()) {
-                        Text(text = "Relationships:", style = MaterialTheme.typography.labelMedium, color = VeyronisTertiary, fontWeight = FontWeight.Bold)
+                        Text(text = "${Strings.get("char_relationships", language)}:", style = MaterialTheme.typography.labelMedium, color = LuxuryAuroraViolet, fontWeight = FontWeight.Bold)
                         for (rel in charRelationships) {
                             val otherId = if (rel.sourceCharacterId == char.id) rel.targetCharacterId else rel.sourceCharacterId
                             val otherName = allCharacters.find { it.id == otherId }?.name ?: "Unknown"
-                            Text(text = "• $otherName — ${rel.relationshipType} (${rel.notes})", style = MaterialTheme.typography.bodySmall, color = VeyronisTextPrimary)
+                            Text(text = "• $otherName — ${rel.relationshipType} (${rel.notes})", style = MaterialTheme.typography.bodySmall, color = LuxuryTextPrimary)
                         }
                     }
                 }
             },
             confirmButton = {
                 TextButton(onClick = { selectedCharacter = null }) {
-                    Text("Close", color = VeyronisPrimary)
+                    Text(Strings.get("close", language), color = LuxuryElectricCyan, fontWeight = FontWeight.Bold)
                 }
             }
         )
@@ -234,8 +246,8 @@ fun CharactersScreen(
 
         AlertDialog(
             onDismissRequest = { showEditDialog = false },
-            containerColor = VeyronisPanel,
-            title = { Text(if (editing.id == 0L) "Register Character" else "Edit Character", color = VeyronisTextPrimary) },
+            containerColor = LuxurySurface,
+            title = { Text(if (editing.id == 0L) Strings.get("char_add", language) else Strings.get("char_edit", language), color = LuxuryTextPrimary, fontWeight = FontWeight.Bold) },
             text = {
                 Column(
                     modifier = Modifier
@@ -247,77 +259,153 @@ fun CharactersScreen(
                     OutlinedTextField(
                         value = name,
                         onValueChange = { name = it },
-                        label = { Text("Character Name *") },
-                        modifier = Modifier.fillMaxWidth().testTag("character_name_input"),
-                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = VeyronisPrimary, focusedTextColor = VeyronisTextPrimary, unfocusedTextColor = VeyronisTextPrimary)
+                        label = { Text(Strings.get("char_name", language) + " *") },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = LuxuryElectricCyan,
+                            focusedTextColor = LuxuryTextPrimary,
+                            unfocusedTextColor = LuxuryTextPrimary,
+                            unfocusedContainerColor = LuxurySurfaceElevated,
+                            focusedContainerColor = LuxurySurfaceElevated
+                        ),
+                        modifier = Modifier.fillMaxWidth().testTag("char_dialog_name_input")
                     )
+
                     OutlinedTextField(
                         value = aliases,
                         onValueChange = { aliases = it },
-                        label = { Text("Aliases (comma separated)") },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = VeyronisPrimary, focusedTextColor = VeyronisTextPrimary, unfocusedTextColor = VeyronisTextPrimary)
+                        label = { Text(Strings.get("char_alias", language)) },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = LuxuryElectricCyan,
+                            focusedTextColor = LuxuryTextPrimary,
+                            unfocusedTextColor = LuxuryTextPrimary,
+                            unfocusedContainerColor = LuxurySurfaceElevated,
+                            focusedContainerColor = LuxurySurfaceElevated
+                        ),
+                        modifier = Modifier.fillMaxWidth()
                     )
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedTextField(
                             value = age,
                             onValueChange = { age = it },
-                            label = { Text("Age") },
-                            modifier = Modifier.weight(1f),
-                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = VeyronisPrimary, focusedTextColor = VeyronisTextPrimary, unfocusedTextColor = VeyronisTextPrimary)
+                            label = { Text(Strings.get("char_birth", language)) },
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = LuxuryElectricCyan,
+                                focusedTextColor = LuxuryTextPrimary,
+                                unfocusedTextColor = LuxuryTextPrimary,
+                                unfocusedContainerColor = LuxurySurfaceElevated,
+                                focusedContainerColor = LuxurySurfaceElevated
+                            ),
+                            modifier = Modifier.weight(1f)
                         )
                         OutlinedTextField(
                             value = origin,
                             onValueChange = { origin = it },
-                            label = { Text("Origin / World") },
-                            modifier = Modifier.weight(1.5f),
-                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = VeyronisPrimary, focusedTextColor = VeyronisTextPrimary, unfocusedTextColor = VeyronisTextPrimary)
+                            label = { Text(Strings.get("char_origin", language)) },
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = LuxuryElectricCyan,
+                                focusedTextColor = LuxuryTextPrimary,
+                                unfocusedTextColor = LuxuryTextPrimary,
+                                unfocusedContainerColor = LuxurySurfaceElevated,
+                                focusedContainerColor = LuxurySurfaceElevated
+                            ),
+                            modifier = Modifier.weight(1f)
                         )
                     }
+
+                    OutlinedTextField(
+                        value = status,
+                        onValueChange = { status = it },
+                        label = { Text(Strings.get("char_status", language)) },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = LuxuryElectricCyan,
+                            focusedTextColor = LuxuryTextPrimary,
+                            unfocusedTextColor = LuxuryTextPrimary,
+                            unfocusedContainerColor = LuxurySurfaceElevated,
+                            focusedContainerColor = LuxurySurfaceElevated
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Checkbox(
                             checked = isDeceased,
                             onCheckedChange = { isDeceased = it },
-                            colors = CheckboxDefaults.colors(checkedColor = VeyronisWarning)
+                            colors = CheckboxDefaults.colors(checkedColor = LuxuryWarning)
                         )
-                        Text("Is Deceased (Temporal Engine Anchor)", color = VeyronisTextPrimary, style = MaterialTheme.typography.bodySmall)
+                        Text(text = if (language == AppLanguage.ARABIC) "متوفى" else "Deceased", color = LuxuryTextPrimary)
                     }
+
                     if (isDeceased) {
                         OutlinedTextField(
                             value = deathTimeStr,
                             onValueChange = { deathTimeStr = it },
-                            label = { Text("Demise Cosmic Year (e.g., 1220.0)") },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = VeyronisWarning, focusedTextColor = VeyronisTextPrimary, unfocusedTextColor = VeyronisTextPrimary)
+                            label = { Text(if (language == AppLanguage.ARABIC) "السنة الكونية للوفاة" else "Cosmic Year of Death") },
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = LuxuryElectricCyan,
+                                focusedTextColor = LuxuryTextPrimary,
+                                unfocusedTextColor = LuxuryTextPrimary,
+                                unfocusedContainerColor = LuxurySurfaceElevated,
+                                focusedContainerColor = LuxurySurfaceElevated
+                            ),
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
+
                     OutlinedTextField(
                         value = abilities,
                         onValueChange = { abilities = it },
-                        label = { Text("Abilities & Powers") },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = VeyronisPrimary, focusedTextColor = VeyronisTextPrimary, unfocusedTextColor = VeyronisTextPrimary)
+                        label = { Text(Strings.get("char_abilities", language)) },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = LuxuryElectricCyan,
+                            focusedTextColor = LuxuryTextPrimary,
+                            unfocusedTextColor = LuxuryTextPrimary,
+                            unfocusedContainerColor = LuxurySurfaceElevated,
+                            focusedContainerColor = LuxurySurfaceElevated
+                        ),
+                        modifier = Modifier.fillMaxWidth()
                     )
+
                     OutlinedTextField(
                         value = appearance,
                         onValueChange = { appearance = it },
-                        label = { Text("Appearance") },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = VeyronisPrimary, focusedTextColor = VeyronisTextPrimary, unfocusedTextColor = VeyronisTextPrimary)
+                        label = { Text(if (language == AppLanguage.ARABIC) "المظهر الخارجي" else "Appearance") },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = LuxuryElectricCyan,
+                            focusedTextColor = LuxuryTextPrimary,
+                            unfocusedTextColor = LuxuryTextPrimary,
+                            unfocusedContainerColor = LuxurySurfaceElevated,
+                            focusedContainerColor = LuxurySurfaceElevated
+                        ),
+                        modifier = Modifier.fillMaxWidth()
                     )
+
                     OutlinedTextField(
                         value = personality,
                         onValueChange = { personality = it },
-                        label = { Text("Personality") },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = VeyronisPrimary, focusedTextColor = VeyronisTextPrimary, unfocusedTextColor = VeyronisTextPrimary)
+                        label = { Text(if (language == AppLanguage.ARABIC) "السمات الشخصية" else "Personality") },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = LuxuryElectricCyan,
+                            focusedTextColor = LuxuryTextPrimary,
+                            unfocusedTextColor = LuxuryTextPrimary,
+                            unfocusedContainerColor = LuxurySurfaceElevated,
+                            focusedContainerColor = LuxurySurfaceElevated
+                        ),
+                        modifier = Modifier.fillMaxWidth()
                     )
+
                     OutlinedTextField(
                         value = notes,
                         onValueChange = { notes = it },
-                        label = { Text("Story Notes & Arc") },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = VeyronisPrimary, focusedTextColor = VeyronisTextPrimary, unfocusedTextColor = VeyronisTextPrimary)
+                        label = { Text(Strings.get("char_notes", language)) },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = LuxuryElectricCyan,
+                            focusedTextColor = LuxuryTextPrimary,
+                            unfocusedTextColor = LuxuryTextPrimary,
+                            unfocusedContainerColor = LuxurySurfaceElevated,
+                            focusedContainerColor = LuxurySurfaceElevated
+                        ),
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
             },
@@ -330,7 +418,7 @@ fun CharactersScreen(
                                 aliases = aliases,
                                 age = age,
                                 origin = origin,
-                                currentStatus = if (isDeceased) "Deceased" else status,
+                                currentStatus = status,
                                 isDeceased = isDeceased,
                                 deathCosmicTime = deathTimeStr.toDoubleOrNull(),
                                 abilities = abilities,
@@ -338,22 +426,22 @@ fun CharactersScreen(
                                 personality = personality,
                                 strengths = strengths,
                                 weaknesses = weaknesses,
-                                notes = notes,
-                                updatedAt = System.currentTimeMillis()
+                                notes = notes
                             )
                             viewModel.saveCharacter(updated)
                             showEditDialog = false
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = VeyronisPrimary),
-                    modifier = Modifier.testTag("save_character_button")
+                    colors = ButtonDefaults.buttonColors(containerColor = LuxuryElectricCyan),
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.testTag("char_dialog_save_btn")
                 ) {
-                    Text("Save")
+                    Text(Strings.get("save", language), color = LuxuryVoidBackground, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showEditDialog = false }) {
-                    Text("Cancel", color = VeyronisTextSecondary)
+                    Text(Strings.get("cancel", language), color = LuxuryTextSecondary)
                 }
             }
         )
@@ -361,17 +449,23 @@ fun CharactersScreen(
 }
 
 @Composable
-fun CharacterCard(
+fun LuxuryCharacterCard(
     character: Character,
     appearancesCount: Int,
     relationshipCount: Int,
+    language: AppLanguage,
     onClick: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = VeyronisPanel),
-        shape = RoundedCornerShape(12.dp),
+    val charColor = try {
+        Color(android.graphics.Color.parseColor(character.primaryColorHex))
+    } catch (e: Exception) {
+        LuxuryElectricCyan
+    }
+
+    LuxuryGlassCard(
+        glowColor = charColor,
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
@@ -385,19 +479,16 @@ fun CharacterCard(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Surface(
-                        color = try {
-                            Color(android.graphics.Color.parseColor(character.primaryColorHex)).copy(alpha = 0.25f)
-                        } catch (e: Exception) {
-                            VeyronisPrimary.copy(alpha = 0.25f)
-                        },
+                        color = charColor.copy(alpha = 0.2f),
                         shape = CircleShape,
-                        modifier = Modifier.size(40.dp)
+                        border = androidx.compose.foundation.BorderStroke(1.5.dp, charColor),
+                        modifier = Modifier.size(44.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Text(
                                 text = character.name.take(1).uppercase(),
-                                color = VeyronisTextPrimary,
-                                fontWeight = FontWeight.Bold,
+                                color = LuxuryTextPrimary,
+                                fontWeight = FontWeight.ExtraBold,
                                 style = MaterialTheme.typography.titleMedium
                             )
                         }
@@ -407,28 +498,32 @@ fun CharacterCard(
                         Text(
                             text = character.name,
                             style = MaterialTheme.typography.titleMedium,
-                            color = VeyronisTextPrimary,
+                            color = LuxuryTextPrimary,
                             fontWeight = FontWeight.Bold
                         )
                         if (character.origin.isNotBlank()) {
                             Text(
                                 text = character.origin,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = VeyronisTextSecondary
+                                color = LuxuryTextSecondary
                             )
                         }
                     }
                 }
 
                 Surface(
-                    color = if (character.isDeceased) VeyronisWarningContainer else VeyronisPrimaryContainer,
-                    shape = RoundedCornerShape(12.dp)
+                    color = if (character.isDeceased) LuxuryWarning.copy(alpha = 0.2f) else LuxurySurfaceElevated,
+                    shape = RoundedCornerShape(12.dp),
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        if (character.isDeceased) LuxuryWarning else LuxuryElectricCyan.copy(alpha = 0.4f)
+                    )
                 ) {
                     Text(
-                        text = if (character.isDeceased) "Deceased" else character.currentStatus,
-                        color = if (character.isDeceased) VeyronisWarning else VeyronisPrimary,
+                        text = if (character.isDeceased) (if (language == AppLanguage.ARABIC) "متوفى" else "Deceased") else character.currentStatus,
+                        color = if (character.isDeceased) LuxuryWarning else LuxuryElectricCyan,
                         style = MaterialTheme.typography.labelSmall,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -437,15 +532,15 @@ fun CharacterCard(
             if (character.abilities.isNotBlank()) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Abilities: ${character.abilities}",
+                    text = "${Strings.get("char_abilities", language)}: ${character.abilities}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = VeyronisTextSecondary,
+                    color = LuxuryTextSecondary,
                     maxLines = 1
                 )
             }
 
             Spacer(modifier = Modifier.height(10.dp))
-            HorizontalDivider(color = VeyronisSurfaceHighlight)
+            HorizontalDivider(color = LuxurySurfaceHighlight)
             Spacer(modifier = Modifier.height(8.dp))
 
             Row(
@@ -455,23 +550,25 @@ fun CharacterCard(
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
-                        text = "📖 $appearancesCount scenes",
+                        text = "📖 $appearancesCount ${Strings.get("scenes", language)}",
                         style = MaterialTheme.typography.labelSmall,
-                        color = VeyronisTertiary
+                        color = LuxuryAuroraViolet,
+                        fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        text = "🔗 $relationshipCount bonds",
+                        text = "🔗 $relationshipCount ${if (language == AppLanguage.ARABIC) "روابط" else "bonds"}",
                         style = MaterialTheme.typography.labelSmall,
-                        color = VeyronisSecondary
+                        color = LuxuryCyberIndigo,
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
 
                 Row {
                     IconButton(onClick = onEdit, modifier = Modifier.size(28.dp)) {
-                        Icon(Icons.Default.Edit, contentDescription = "Edit", tint = VeyronisTextSecondary, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Edit, contentDescription = Strings.get("edit", language), tint = LuxuryTextSecondary, modifier = Modifier.size(16.dp))
                     }
                     IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
-                        Icon(Icons.Default.Delete, contentDescription = "Delete", tint = VeyronisWarning, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Delete, contentDescription = Strings.get("delete", language), tint = LuxuryWarning, modifier = Modifier.size(16.dp))
                     }
                 }
             }
@@ -482,7 +579,7 @@ fun CharacterCard(
 @Composable
 fun DetailSectionItem(label: String, content: String) {
     Column {
-        Text(text = label, style = MaterialTheme.typography.labelSmall, color = VeyronisTextMuted, fontWeight = FontWeight.Bold)
-        Text(text = content, style = MaterialTheme.typography.bodySmall, color = VeyronisTextPrimary)
+        Text(text = label, style = MaterialTheme.typography.labelSmall, color = LuxuryTextMuted, fontWeight = FontWeight.Bold)
+        Text(text = content, style = MaterialTheme.typography.bodySmall, color = LuxuryTextPrimary)
     }
 }

@@ -20,6 +20,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.model.StoryEvent
+import com.example.ui.AppLanguage
+import com.example.ui.Strings
 import com.example.ui.VeyronisViewModel
 import com.example.ui.theme.*
 
@@ -32,6 +34,7 @@ fun EventsScreen(
     val allEvents by viewModel.allStoryEvents.collectAsStateWithLifecycle()
     val allTimelines by viewModel.allTimelines.collectAsStateWithLifecycle()
     val allCharacters by viewModel.allCharacters.collectAsStateWithLifecycle()
+    val language by viewModel.appLanguage.collectAsStateWithLifecycle()
 
     var searchQuery by remember { mutableStateOf("") }
     var selectedEvent by remember { mutableStateOf<StoryEvent?>(null) }
@@ -64,7 +67,7 @@ fun EventsScreen(
                 contentColor = VeyronisBackground,
                 modifier = Modifier.testTag("add_event_fab")
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Story Event")
+                Icon(Icons.Default.Add, contentDescription = Strings.get("events_add", language))
             }
         }
     ) { innerPadding ->
@@ -80,13 +83,13 @@ fun EventsScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Story Events & Chronology",
+                    text = Strings.get("events_title", language),
                     style = MaterialTheme.typography.headlineSmall,
                     color = VeyronisTextPrimary,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "${allEvents.size} Events",
+                    text = "${allEvents.size} ${Strings.get("events_count", language)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = VeyronisTextMuted
                 )
@@ -97,7 +100,7 @@ fun EventsScreen(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                placeholder = { Text("Search events by title, summary, location...", color = VeyronisTextMuted) },
+                placeholder = { Text(Strings.get("events_search_hint", language), color = VeyronisTextMuted) },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = VeyronisTextSecondary) },
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = Color(0xFFE879F9),
@@ -126,8 +129,9 @@ fun EventsScreen(
 
                     EventCard(
                         event = event,
-                        timelineName = timeline?.name ?: "Unknown Timeline",
+                        timelineName = timeline?.name ?: if (language == AppLanguage.ARABIC) "الخط الزمني الرئيسي" else "Unknown Timeline",
                         characterNames = charNames,
+                        language = language,
                         onClick = { selectedEvent = event },
                         onEdit = {
                             eventToEdit = event
@@ -160,7 +164,7 @@ fun EventsScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Text(
-                        text = "Cosmic Epoch: ${ev.cosmicTimestamp} • Timeline: ${timeline?.name ?: "Prime"}",
+                        text = "${Strings.get("events_timestamp", language)}: ${ev.cosmicTimestamp} • ${Strings.get("timeline_title", language)}: ${timeline?.name ?: if (language == AppLanguage.ARABIC) "الرئيسي" else "Prime"}",
                         style = MaterialTheme.typography.labelMedium,
                         color = VeyronisTertiary,
                         fontWeight = FontWeight.Bold
@@ -169,16 +173,16 @@ fun EventsScreen(
                         Text(text = ev.summary, style = MaterialTheme.typography.bodyMedium, color = VeyronisTextPrimary)
                     }
                     HorizontalDivider(color = VeyronisSurfaceHighlight)
-                    if (ev.locationNames.isNotBlank()) DetailSectionItem("Locations", ev.locationNames)
-                    if (ev.causes.isNotBlank()) DetailSectionItem("Causes", ev.causes)
-                    if (ev.consequences.isNotBlank()) DetailSectionItem("Consequences", ev.consequences)
-                    if (ev.relatedLore.isNotBlank()) DetailSectionItem("Related Lore", ev.relatedLore)
-                    if (ev.notes.isNotBlank()) DetailSectionItem("Notes", ev.notes)
+                    if (ev.locationNames.isNotBlank()) DetailSectionItem(Strings.get("events_locations", language), ev.locationNames)
+                    if (ev.causes.isNotBlank()) DetailSectionItem(Strings.get("events_causes", language), ev.causes)
+                    if (ev.consequences.isNotBlank()) DetailSectionItem(Strings.get("events_consequences", language), ev.consequences)
+                    if (ev.relatedLore.isNotBlank()) DetailSectionItem(if (language == AppLanguage.ARABIC) "المعارف المرتبطة" else "Related Lore", ev.relatedLore)
+                    if (ev.notes.isNotBlank()) DetailSectionItem(if (language == AppLanguage.ARABIC) "ملاحظات" else "Notes", ev.notes)
                 }
             },
             confirmButton = {
                 TextButton(onClick = { selectedEvent = null }) {
-                    Text("Close", color = VeyronisPrimary)
+                    Text(Strings.get("close", language), color = VeyronisPrimary)
                 }
             }
         )
@@ -200,7 +204,7 @@ fun EventsScreen(
         AlertDialog(
             onDismissRequest = { showEditDialog = false },
             containerColor = VeyronisPanel,
-            title = { Text(if (editing.id == 0L) "Record Story Event" else "Edit Event", color = VeyronisTextPrimary) },
+            title = { Text(if (editing.id == 0L) Strings.get("events_add", language) else Strings.get("events_edit", language), color = VeyronisTextPrimary) },
             text = {
                 Column(
                     modifier = Modifier
@@ -212,14 +216,14 @@ fun EventsScreen(
                     OutlinedTextField(
                         value = title,
                         onValueChange = { title = it },
-                        label = { Text("Event Title *") },
+                        label = { Text(Strings.get("events_name", language)) },
                         modifier = Modifier.fillMaxWidth().testTag("event_title_input"),
                         colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFFE879F9), focusedTextColor = VeyronisTextPrimary, unfocusedTextColor = VeyronisTextPrimary)
                     )
                     OutlinedTextField(
                         value = summary,
                         onValueChange = { summary = it },
-                        label = { Text("Summary") },
+                        label = { Text(if (language == AppLanguage.ARABIC) "الملخص" else "Summary") },
                         modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFFE879F9), focusedTextColor = VeyronisTextPrimary, unfocusedTextColor = VeyronisTextPrimary)
                     )
@@ -227,14 +231,14 @@ fun EventsScreen(
                         OutlinedTextField(
                             value = cosmicTimeStr,
                             onValueChange = { cosmicTimeStr = it },
-                            label = { Text("Cosmic Timestamp") },
+                            label = { Text(Strings.get("events_timestamp", language)) },
                             modifier = Modifier.weight(1f),
                             colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFFE879F9), focusedTextColor = VeyronisTextPrimary, unfocusedTextColor = VeyronisTextPrimary)
                         )
                         OutlinedTextField(
                             value = durationStr,
                             onValueChange = { durationStr = it },
-                            label = { Text("Duration (Years)") },
+                            label = { Text(if (language == AppLanguage.ARABIC) "المدة (سنوات)" else "Duration (Years)") },
                             modifier = Modifier.weight(1f),
                             colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFFE879F9), focusedTextColor = VeyronisTextPrimary, unfocusedTextColor = VeyronisTextPrimary)
                         )
@@ -242,28 +246,28 @@ fun EventsScreen(
                     OutlinedTextField(
                         value = locationNames,
                         onValueChange = { locationNames = it },
-                        label = { Text("Locations (e.g. Solaris Citadel, Sector 4)") },
+                        label = { Text(Strings.get("events_locations", language)) },
                         modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFFE879F9), focusedTextColor = VeyronisTextPrimary, unfocusedTextColor = VeyronisTextPrimary)
                     )
                     OutlinedTextField(
                         value = causes,
                         onValueChange = { causes = it },
-                        label = { Text("Causes") },
+                        label = { Text(Strings.get("events_causes", language)) },
                         modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFFE879F9), focusedTextColor = VeyronisTextPrimary, unfocusedTextColor = VeyronisTextPrimary)
                     )
                     OutlinedTextField(
                         value = consequences,
                         onValueChange = { consequences = it },
-                        label = { Text("Consequences") },
+                        label = { Text(Strings.get("events_consequences", language)) },
                         modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFFE879F9), focusedTextColor = VeyronisTextPrimary, unfocusedTextColor = VeyronisTextPrimary)
                     )
                     OutlinedTextField(
                         value = notes,
                         onValueChange = { notes = it },
-                        label = { Text("Notes") },
+                        label = { Text(if (language == AppLanguage.ARABIC) "ملاحظات" else "Notes") },
                         modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFFE879F9), focusedTextColor = VeyronisTextPrimary, unfocusedTextColor = VeyronisTextPrimary)
                     )
@@ -291,12 +295,12 @@ fun EventsScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE879F9)),
                     modifier = Modifier.testTag("save_event_button")
                 ) {
-                    Text("Save", color = VeyronisBackground)
+                    Text(Strings.get("save", language), color = VeyronisBackground)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showEditDialog = false }) {
-                    Text("Cancel", color = VeyronisTextSecondary)
+                    Text(Strings.get("cancel", language), color = VeyronisTextSecondary)
                 }
             }
         )
@@ -308,6 +312,7 @@ fun EventCard(
     event: StoryEvent,
     timelineName: String,
     characterNames: List<String>,
+    language: AppLanguage,
     onClick: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
@@ -331,7 +336,7 @@ fun EventCard(
                     shape = RoundedCornerShape(6.dp)
                 ) {
                     Text(
-                        text = "COSMIC: ${event.cosmicTimestamp}",
+                        text = "${if (language == AppLanguage.ARABIC) "السنة الكونية" else "COSMIC"}: ${event.cosmicTimestamp}",
                         color = Color(0xFFE879F9),
                         style = MaterialTheme.typography.labelSmall,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
@@ -341,10 +346,10 @@ fun EventCard(
 
                 Row {
                     IconButton(onClick = onEdit, modifier = Modifier.size(28.dp)) {
-                        Icon(Icons.Default.Edit, contentDescription = "Edit", tint = VeyronisTextSecondary, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Edit, contentDescription = Strings.get("edit", language), tint = VeyronisTextSecondary, modifier = Modifier.size(16.dp))
                     }
                     IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
-                        Icon(Icons.Default.Delete, contentDescription = "Delete", tint = VeyronisWarning, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Delete, contentDescription = Strings.get("delete", language), tint = VeyronisWarning, modifier = Modifier.size(16.dp))
                     }
                 }
             }
@@ -377,7 +382,7 @@ fun EventCard(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Timeline: $timelineName",
+                    text = "${Strings.get("timeline_title", language)}: $timelineName",
                     style = MaterialTheme.typography.labelSmall,
                     color = VeyronisTertiary
                 )

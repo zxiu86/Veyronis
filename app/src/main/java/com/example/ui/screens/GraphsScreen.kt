@@ -28,6 +28,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.model.CausalEdge
 import com.example.data.model.StoryEvent
+import com.example.ui.AppLanguage
+import com.example.ui.Strings
 import com.example.ui.VeyronisViewModel
 import com.example.ui.theme.*
 import kotlin.math.atan2
@@ -49,6 +51,7 @@ fun GraphsScreen(
     val allEdges by viewModel.allCausalEdges.collectAsStateWithLifecycle()
     val allCharacters by viewModel.allCharacters.collectAsStateWithLifecycle()
     val allRelationships by viewModel.allRelationships.collectAsStateWithLifecycle()
+    val language by viewModel.appLanguage.collectAsStateWithLifecycle()
 
     var graphMode by remember { mutableStateOf(GraphMode.CAUSAL_EVENTS) }
 
@@ -81,14 +84,14 @@ fun GraphsScreen(
                         onClick = { graphMode = GraphMode.CAUSAL_EVENTS },
                         shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
                     ) {
-                        Text("Causal Graph", style = MaterialTheme.typography.labelSmall)
+                        Text(Strings.get("graphs_mode_causal", language), style = MaterialTheme.typography.labelSmall)
                     }
                     SegmentedButton(
                         selected = graphMode == GraphMode.CHARACTER_RELATIONS,
                         onClick = { graphMode = GraphMode.CHARACTER_RELATIONS },
                         shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
                     ) {
-                        Text("Character Bonds", style = MaterialTheme.typography.labelSmall)
+                        Text(Strings.get("graphs_mode_bonds", language), style = MaterialTheme.typography.labelSmall)
                     }
                 }
 
@@ -98,14 +101,14 @@ fun GraphsScreen(
                             scale = (scale * 1.25f).coerceAtMost(3.0f)
                         }
                     ) {
-                        Icon(Icons.Default.ZoomIn, contentDescription = "Zoom In", tint = VeyronisTextSecondary)
+                        Icon(Icons.Default.ZoomIn, contentDescription = if (language == AppLanguage.ARABIC) "تكبير" else "Zoom In", tint = VeyronisTextSecondary)
                     }
                     IconButton(
                         onClick = {
                             scale = (scale / 1.25f).coerceAtLeast(0.4f)
                         }
                     ) {
-                        Icon(Icons.Default.ZoomOut, contentDescription = "Zoom Out", tint = VeyronisTextSecondary)
+                        Icon(Icons.Default.ZoomOut, contentDescription = if (language == AppLanguage.ARABIC) "تصغير" else "Zoom Out", tint = VeyronisTextSecondary)
                     }
                     IconButton(
                         onClick = {
@@ -113,14 +116,14 @@ fun GraphsScreen(
                             panOffset = Offset(50f, 100f)
                         }
                     ) {
-                        Icon(Icons.Default.RestartAlt, contentDescription = "Reset View", tint = VeyronisTextSecondary)
+                        Icon(Icons.Default.RestartAlt, contentDescription = if (language == AppLanguage.ARABIC) "إعادة تعيين العرض" else "Reset View", tint = VeyronisTextSecondary)
                     }
                     if (graphMode == GraphMode.CAUSAL_EVENTS) {
                         IconButton(
                             onClick = { showAddEdgeDialog = true },
                             modifier = Modifier.testTag("add_causal_edge_button")
                         ) {
-                            Icon(Icons.Default.AddLink, contentDescription = "Link Events", tint = VeyronisPrimary)
+                            Icon(Icons.Default.AddLink, contentDescription = Strings.get("graphs_link_events", language), tint = VeyronisPrimary)
                         }
                     }
                 }
@@ -322,13 +325,13 @@ fun GraphsScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    LegendItem("Causes", Color(0xFF38BDF8))
-                    LegendItem("Leads To", Color(0xFFFBBF24))
-                    LegendItem("Conflicts", Color(0xFFF87171))
-                    LegendItem("Creates", Color(0xFF34D399))
+                    LegendItem(if (language == AppLanguage.ARABIC) "يسبب" else "Causes", Color(0xFF38BDF8))
+                    LegendItem(if (language == AppLanguage.ARABIC) "يؤدي إلى" else "Leads To", Color(0xFFFBBF24))
+                    LegendItem(if (language == AppLanguage.ARABIC) "يتعارض" else "Conflicts", Color(0xFFF87171))
+                    LegendItem(if (language == AppLanguage.ARABIC) "ينشئ" else "Creates", Color(0xFF34D399))
                 }
                 Text(
-                    text = "Pan & Zoom to explore causal chains",
+                    text = if (language == AppLanguage.ARABIC) "اسحب وقرّب لاستكشاف السلاسل السببية" else "Pan & Zoom to explore causal chains",
                     style = MaterialTheme.typography.labelSmall,
                     color = VeyronisTextMuted
                 )
@@ -345,10 +348,10 @@ fun GraphsScreen(
         AlertDialog(
             onDismissRequest = { showAddEdgeDialog = false },
             containerColor = VeyronisPanel,
-            title = { Text("Add Causal Relationship", color = VeyronisTextPrimary) },
+            title = { Text(Strings.get("graphs_link_events", language), color = VeyronisTextPrimary) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Source Event (Cause):", style = MaterialTheme.typography.labelMedium, color = VeyronisTextSecondary)
+                    Text(if (language == AppLanguage.ARABIC) "حدث المصدر (السبب):" else "Source Event (Cause):", style = MaterialTheme.typography.labelMedium, color = VeyronisTextSecondary)
                     for (ev in allEvents) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -363,7 +366,7 @@ fun GraphsScreen(
                     }
 
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("Target Event (Effect):", style = MaterialTheme.typography.labelMedium, color = VeyronisTextSecondary)
+                    Text(if (language == AppLanguage.ARABIC) "حدث الهدف (النتيجة):" else "Target Event (Effect):", style = MaterialTheme.typography.labelMedium, color = VeyronisTextSecondary)
                     for (ev in allEvents) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -380,7 +383,7 @@ fun GraphsScreen(
                     OutlinedTextField(
                         value = relationType,
                         onValueChange = { relationType = it },
-                        label = { Text("Type (Causes, Leads To, Depends On, Conflicts With, Prevents, Creates)") },
+                        label = { Text(if (language == AppLanguage.ARABIC) "النوع (Causes, Leads To, Conflicts With, Creates)" else "Type (Causes, Leads To, Depends On, Conflicts With, Prevents, Creates)") },
                         modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = VeyronisPrimary, focusedTextColor = VeyronisTextPrimary, unfocusedTextColor = VeyronisTextPrimary)
                     )
@@ -396,12 +399,12 @@ fun GraphsScreen(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = VeyronisPrimary)
                 ) {
-                    Text("Connect")
+                    Text(if (language == AppLanguage.ARABIC) "ربط" else "Connect")
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showAddEdgeDialog = false }) {
-                    Text("Cancel", color = VeyronisTextSecondary)
+                    Text(Strings.get("cancel", language), color = VeyronisTextSecondary)
                 }
             }
         )
