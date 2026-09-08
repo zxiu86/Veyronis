@@ -431,3 +431,12 @@ fun VeyronisApp(viewModel: VeyronisViewModel) {
         }
     }
 }
+
+@Composable
+fun Greeting(name: String, modifier: Modifier = Modifier) {
+    Text(
+        text = "Hello, $name!",
+        color = LuxuryTextPrimary,
+        modifier = modifier
+    )
+}
